@@ -37,6 +37,7 @@
   .dv-total { font: 700 22px/1.1 var(--f-display); font-variant-numeric: tabular-nums; }
   .dv-state { margin: 0; font: 12px/1.5 var(--f-mono); color: var(--muted); }
   .dv-panel .pill { justify-self: start; white-space: normal; }
+  #renders-derivado .log { max-height: none; }
 </style>
 </head>
 <body data-module="arquitetura">
@@ -273,6 +274,39 @@ const total = filtered.reduce((s, c) =&gt; s + c.bags, 0)
 <span class="c">// const filtered = useMemo(() =&gt; ..., [contracts, grain])</span></pre></div>
       </div>
 
+      <div class="tradeoff" id="renders-derivado">
+        <h3>How many renders each approach costs</h3>
+        <p class="tradeoff-q">Besides going stale, duplicated state often costs an <b>extra render</b>. Click to add a contract and watch each component's timeline. The most common pattern, syncing with <code>useEffect</code>, renders twice, and the first render shows the stale total.</p>
+        <div class="row">
+          <button type="button" class="btn primary" id="rd-run">+ Add contract (+540 bags)</button>
+          <button type="button" class="btn ghost" id="rd-reset">Reset</button>
+        </div>
+        <div class="tradeoff-grid">
+          <div class="tcard">
+            <h3>Computed during render</h3>
+<pre class="code">const total = sum(contracts)</pre>
+            <ol class="log" id="rd-derived" data-empty="No renders yet."></ol>
+            <p><b id="rd-derived-n">0</b> renders</p>
+          </div>
+          <div class="tcard">
+            <h3>useState + set in the same handler</h3>
+<pre class="code">setContracts(next)
+setTotal(total + c.bags)</pre>
+            <ol class="log" id="rd-batch" data-empty="No renders yet."></ol>
+            <p><b id="rd-batch-n">0</b> renders</p>
+          </div>
+          <div class="tcard">
+            <h3>useState + useEffect to sync</h3>
+<pre class="code">useEffect(() =&gt; {
+  setTotal(sum(contracts))
+}, [contracts])</pre>
+            <ol class="log" id="rd-effect" data-empty="No renders yet."></ol>
+            <p><b id="rd-effect-n">0</b> renders</p>
+          </div>
+        </div>
+        <p class="tradeoff-q">Since React 18, several <code>set</code> calls in the same event become <b>one</b> render (batching): the middle approach's problem is drifting out of sync, not extra renders. <code>useEffect</code>, on the other hand, only runs after the screen is painted, so its <code>set</code> always triggers another render, and every child re-renders along with it. Computing during render never adds a render. If the math is expensive, <code>useMemo</code> skips redoing the <b>math</b>, not the render.</p>
+      </div>
+
       <div class="tradeoff">
         <h3>The same trap with props: copying a prop into state</h3>
         <p class="tradeoff-q"><code>useState(client.notes)</code> only reads the prop on the <b>first</b> render. When the parent switches clients, the title follows (it comes from the prop), but the field keeps the old text. Pick another client and compare.</p>
@@ -317,7 +351,7 @@ function Notes({ initialNotes }) { ... }</pre></div>
         </div>
         <div class="tcard">
           <h3>Syncing with useEffect is the same bug, slower</h3>
-          <p><code>useEffect(() =&gt; setTotal(sum(contracts)), [contracts])</code> renders twice: first with the stale total on screen, then corrected. Besides being slower, it scatters the logic. Compute it directly.</p>
+          <p><code>useEffect(() =&gt; setTotal(sum(contracts)), [contracts])</code> renders twice: first with the stale total on screen, then corrected. See the render counter above. Besides being slower, it scatters the logic. Compute it directly.</p>
         </div>
         <div class="tcard">
           <h3>Store the id, not a copy of the object</h3>
@@ -600,6 +634,50 @@ Lab.decision($('#decidir'), {
   }
   $$('input[name=dv-cli]').forEach((r) => r.addEventListener('change', () => selectClient(+r.value)));
   selectClient(0);
+})();
+</script>
+<script>
+/* Renders do estado derivado: linha do tempo simulada de três componentes React */
+(() => {
+  const { $ } = Lab;
+  const J = {"sc": "bags", "render": "render {n}: total = {t}", "stale": " (stale)", "effect": "useEffect runs after paint → setTotal({t})", "batch": "batching: setContracts + setTotal → 1 render", "click": "click: setContracts"};
+  const fmt = (n) => n.toLocaleString('en-US') + ' ' + J.sc;
+  const BASE = 4100, ADD = 540;
+  let total, counts;
+  const lists = { derived: $('#rd-derived'), batch: $('#rd-batch'), effect: $('#rd-effect') };
+  function line(key, text, tone) {
+    const li = document.createElement('li');
+    li.className = 'new';
+    if (tone) li.style.color = 'var(--' + tone + ')';
+    li.textContent = text;
+    lists[key].append(li);
+    while (lists[key].children.length > 8) lists[key].firstChild.remove();
+  }
+  function render(key, value, stale) {
+    counts[key]++;
+    $('#rd-' + key + '-n').textContent = counts[key];
+    line(key, J.render.replace('{n}', counts[key]).replace('{t}', fmt(value)) + (stale ? J.stale : ''), stale ? 'bad' : null);
+  }
+  function reset() {
+    total = BASE; counts = { derived: 0, batch: 0, effect: 0 };
+    Object.entries(lists).forEach(([k, el]) => { el.innerHTML = ''; $('#rd-' + k + '-n').textContent = '0'; });
+  }
+  $('#rd-run').addEventListener('click', () => {
+    const before = total, after = total + ADD;
+    total = after;
+    line('derived', J.click, 'muted');
+    render('derived', after);
+    line('batch', J.batch, 'muted');
+    render('batch', after);
+    line('effect', J.click, 'muted');
+    render('effect', before, true);
+    setTimeout(() => {                     // o efeito só roda depois que a tela foi pintada
+      line('effect', J.effect.replace('{t}', fmt(after)), 'muted');
+      render('effect', after);
+    }, 350);
+  });
+  $('#rd-reset').addEventListener('click', reset);
+  reset();
 })();
 </script>
 </body>
