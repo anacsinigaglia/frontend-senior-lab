@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arquitetura e estado · Lab Frontend Sênior</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="lab.css">
+<style>
+  .tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+  .tree ul { margin-left: 12px; padding-left: 14px; border-left: 1px dashed var(--line); }
+  .tree-wrap { overflow-x: auto; }
+  .node { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 3px 0; padding: 5px 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); font: 13px/1.3 var(--f-mono); }
+  .node .cnt { min-width: 22px; text-align: center; padding: 1px 6px; border-radius: 999px; background: var(--paper); color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .node .uses { font-size: 11.5px; color: var(--accent); }
+  .node .pass { font-size: 11.5px; color: var(--warn); }
+  .node.hit { animation: hit 1s ease-out; }
+  @keyframes hit { 0% { background: var(--warn-soft); border-color: var(--warn); } 100% { background: var(--surface); } }
+  .screen-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+  .screen-tabs button { font: 600 14px var(--f-body); padding: 9px 12px; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted); cursor: pointer; }
+  .screen-tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+  .screen { min-height: 176px; display: grid; gap: 6px; align-content: start; }
+  .screen table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .screen td { padding: 6px 4px; border-bottom: 1px solid var(--line); }
+  .screen td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .skel { height: 26px; border-radius: 6px; background: linear-gradient(90deg, var(--line), var(--surface), var(--line)); background-size: 200% 100%; animation: sk 1.1s linear infinite; }
+  @keyframes sk { to { background-position: -200% 0; } }
+  .status-line { font: 12px var(--f-mono); color: var(--muted); min-height: 18px; }
+</style>
+</head>
+<body data-module="arquitetura">
+<header class="topbar"><div class="wrap"><a class="brand" href="index.html"><span class="brand-mark">FS</span>Lab Frontend Sênior</a><nav class="modnav" id="modnav" aria-label="Módulos"></nav></div></header>
+
+<div class="wrap">
+  <header class="page-head">
+    <p class="eyebrow">Módulo · Arquitetura e estado</p>
+    <h1>Cada estado tem um lugar certo</h1>
+    <p class="lede">A maioria dos problemas de arquitetura no front vem de estado no lugar errado: dado do servidor copiado para um store global, prop passando por cinco componentes que não a usam, filtro que some quando a página recarrega. Aqui você vê o custo de cada escolha.</p>
+    <ul class="senior">
+      <li><b>Separa servidor de cliente</b>Dado da API é cache e pertence ao React Query. useState fica com o que é da interface.</li>
+      <li><b>Mantém o estado perto de quem usa</b>Sobe o estado só quando precisa, e só até o pai comum mais próximo.</li>
+      <li><b>Pensa no link compartilhado</b>Filtro, aba e página moram na URL.</li>
+    </ul>
+  </header>
+
+  <main>
+    <section class="lab" id="props">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · Quem renderiza de novo</p>
+        <h2>Prop drilling, Context ou store</h2>
+        <p>O <code>App</code> guarda o tema e o usuário logado. Três componentes no fundo da árvore usam esses dados. Troque o tema ou o usuário e veja quais componentes renderizam de novo em cada abordagem.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <span class="field-label">Abordagem</span>
+            <div class="seg" role="radiogroup" aria-label="Abordagem de estado">
+              <label><input type="radio" name="arch" value="props" checked><span>Props</span></label>
+              <label><input type="radio" name="arch" value="context"><span>Context</span></label>
+              <label><input type="radio" name="arch" value="store"><span>Store com seletor</span></label>
+            </div>
+          </div>
+          <div class="row">
+            <button type="button" class="btn primary" data-change="tema">Trocar tema</button>
+            <button type="button" class="btn" data-change="usuario">Trocar usuário</button>
+          </div>
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="r-now">–</span><span class="stat-l">renderizaram agora</span></div>
+            <div class="stat"><span class="stat-n" id="r-waste">–</span><span class="stat-l">sem necessidade</span></div>
+          </div>
+          <p class="hint" id="arch-note"></p>
+          <button type="button" class="btn ghost small" id="r-reset" style="justify-self:start">Zerar contadores</button>
+        </div>
+        <div class="output tree-wrap"><ul class="tree" id="tree"></ul></div>
+      </div>
+      <details class="src">
+        <summary>Ver o código das três abordagens</summary>
+<pre class="code"><span class="c">// Props: cada camada recebe e repassa, mesmo sem usar</span>
+&lt;Layout tema={tema} usuario={usuario}&gt; → &lt;Sidebar tema={tema}&gt; → &lt;Menu tema={tema}&gt; → &lt;ThemeToggle tema={tema} /&gt;
+
+<span class="c">// Context: some o repasse, mas todo consumidor renderiza quando QUALQUER campo muda</span>
+const AppCtx = createContext()
+&lt;AppCtx.Provider value={{ tema, usuario }}&gt;...
+const { usuario } = useContext(AppCtx)   <span class="no">// UserBadge renderiza ao trocar o tema</span>
+
+<span class="c">// Store com seletor (Zustand): cada componente assina só o que lê</span>
+const useApp = create(set =&gt; ({ tema: 'claro', usuario: 'Ana', trocarTema: () =&gt; set(...) }))
+const usuario = useApp(s =&gt; s.usuario)   <span class="ok">// ignora mudanças de tema</span></pre>
+      </details>
+      <p class="takeaway"><b>Leitura de sênior.</b> Repassar prop por duas ou três camadas é normal e fácil de rastrear. Context funciona bem para valores que mudam pouco (tema, usuário, idioma). Store com seletor compensa quando muitos componentes leem partes diferentes de um estado que muda com frequência.</p>
+    </section>
+
+    <section class="lab" id="cache">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · Estado do servidor</p>
+        <h2>Duas telas pedem os mesmos clientes</h2>
+        <p>A carteira e o relatório usam a lista <code>/api/clientes</code>, que leva 700 ms para responder. Alterne entre as telas e compare buscar a cada montagem com usar um cache compartilhado. Depois registre uma venda e veja qual tela mostra o dado novo.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <span class="field-label">Como buscar</span>
+            <div class="seg" role="radiogroup" aria-label="Estratégia de busca">
+              <label><input type="radio" name="fetch" value="effect" checked><span>useEffect + fetch</span></label>
+              <label><input type="radio" name="fetch" value="query"><span>Cache (React Query)</span></label>
+            </div>
+          </div>
+          <div class="field" id="stale-field">
+            <label for="stale">staleTime <output id="stale-out" for="stale">10 s</output></label>
+            <input id="stale" type="range" min="0" max="30" step="5" value="10">
+            <p class="hint">Por quanto tempo o dado em cache vale sem buscar de novo.</p>
+          </div>
+          <button type="button" class="btn" id="sell" style="justify-self:start">Registrar venda de 100 sc</button>
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="req-count">0</span><span class="stat-l">requisições</span></div>
+            <div class="stat"><span class="stat-n" id="wait-total">0 ms</span><span class="stat-l">espera na tela</span></div>
+          </div>
+        </div>
+        <div class="output">
+          <div class="screen-tabs" role="tablist" aria-label="Telas">
+            <button type="button" role="tab" aria-selected="true" data-screen="carteira">Carteira</button>
+            <button type="button" role="tab" aria-selected="false" data-screen="relatorio">Relatório</button>
+          </div>
+          <div class="screen" id="screen" role="tabpanel" aria-live="polite"></div>
+          <p class="status-line" id="screen-status"></p>
+          <ol class="log" id="req-log" data-empty="As requisições aparecem aqui."></ol>
+        </div>
+      </div>
+      <div class="code-pair">
+        <div><p class="code-label">Cada tela busca sozinha</p>
+<pre class="code">const [clientes, setClientes] = useState([])
+const [carregando, setCarregando] = useState(true)
+useEffect(() =&gt; {
+  fetch('/api/clientes')
+    .then(r =&gt; r.json())
+    .then(setClientes)
+    .finally(() =&gt; setCarregando(false))
+}, [])   <span class="no">// sem cache, sem cancelamento, sem retry</span></pre></div>
+        <div><p class="code-label">Cache compartilhado por chave</p>
+<pre class="code">const { data, isPending } = useQuery({
+  queryKey: ['clientes'],
+  queryFn: api.clientes,
+  staleTime: 10_000,
+})
+
+<span class="c">// depois de uma mutação:</span>
+queryClient.invalidateQueries({ queryKey: ['clientes'] })  <span class="ok">// as duas telas atualizam</span></pre></div>
+      </div>
+      <p class="takeaway"><b>Leitura de sênior.</b> Dado do servidor não é estado da aplicação, é uma cópia que pode estar velha. Uma biblioteca de cache resolve deduplicação, revalidação, cancelamento e retry. Copiar a resposta para Redux ou Context é recriar essa biblioteca com bugs.</p>
+    </section>
+
+    <section id="decidir"></section>
+  </main>
+
+  <nav class="pager" id="pager" aria-label="Navegação entre módulos"></nav>
+</div>
+
+<script src="lab.js"></script>
+<script>
+const { $, $$, esc } = Lab;
+
+/* Árvore de componentes */
+(() => {
+  const TREE = { id: 'App', state: true, children: [
+    { id: 'Layout', pass: ['tema', 'usuario'], children: [
+      { id: 'Header', pass: ['usuario'], children: [{ id: 'UserBadge', uses: 'usuario' }] },
+      { id: 'Sidebar', pass: ['tema'], children: [{ id: 'Menu', pass: ['tema'], children: [{ id: 'ThemeToggle', uses: 'tema' }] }] },
+      { id: 'Content', pass: ['tema'], children: [{ id: 'Tabela', uses: 'tema' }] },
+    ] },
+  ] };
+  const all = [];
+  (function flat(n) { all.push(n); (n.children || []).forEach(flat); })(TREE);
+  const counts = Object.fromEntries(all.map((n) => [n.id, 0]));
+  const mode = () => $('input[name=arch]:checked').value;
+  const NOTES = {
+    props: 'O estado muda no App, e o React renderiza a árvore inteira abaixo dele. Os rótulos laranja mostram as props que só passam adiante.',
+    context: 'Com os componentes do meio em memo, só os consumidores do Context renderizam. Mas todos renderizam, mesmo quem lê um campo que não mudou.',
+    store: 'Cada componente assina só o campo que lê. Trocar o tema não acorda o UserBadge, e o App nem participa.',
+  };
+
+  function draw() {
+    const m = mode();
+    const li = (n) => `<li><span class="node" id="n-${n.id}">&lt;${n.id}&gt;` +
+      (n.state ? `<span class="uses">${m === 'store' ? 'sem estado' : 'estado: tema, usuario'}</span>` : '') +
+      (n.uses ? `<span class="uses">usa ${n.uses}</span>` : '') +
+      (m === 'props' && n.pass ? `<span class="pass">repassa ${n.pass.join(', ')}</span>` : '') +
+      `<span class="cnt" title="renders">${counts[n.id]}</span></span>` +
+      (n.children ? `<ul>${n.children.map(li).join('')}</ul>` : '') + '</li>';
+    $('#tree').innerHTML = li(TREE);
+    $('#arch-note').textContent = NOTES[m];
+  }
+
+  function change(key) {
+    const m = mode();
+    let rendered;
+    if (m === 'props') rendered = all.map((n) => n.id);
+    else if (m === 'context') rendered = ['App', ...all.filter((n) => n.uses).map((n) => n.id)];
+    else rendered = all.filter((n) => n.uses === key).map((n) => n.id);
+    const needed = all.filter((n) => n.uses === key).map((n) => n.id);
+    rendered.forEach((id) => counts[id]++);
+    draw();
+    rendered.forEach((id) => { const el = $('#n-' + id); el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); });
+    $('#r-now').textContent = `${rendered.length} de ${all.length}`;
+    $('#r-waste').textContent = rendered.filter((id) => !needed.includes(id) && id !== 'App').length;
+  }
+
+  $$('[data-change]').forEach((b) => b.addEventListener('click', () => change(b.dataset.change)));
+  $$('input[name=arch]').forEach((r) => r.addEventListener('change', () => { $('#r-now').textContent = $('#r-waste').textContent = '–'; draw(); }));
+  $('#r-reset').addEventListener('click', () => { all.forEach((n) => { counts[n.id] = 0; }); $('#r-now').textContent = $('#r-waste').textContent = '–'; draw(); });
+  draw();
+})();
+
+/* Cache de servidor */
+(() => {
+  const server = [
+    { nome: 'Fazenda Boa Vista', sacas: 1240 },
+    { nome: 'Sítio Santa Rita', sacas: 860 },
+    { nome: 'Agropecuária Serra Azul', sacas: 2310 },
+    { nome: 'Fazenda São Jorge', sacas: 540 },
+  ];
+  const cache = { data: null, at: 0, promise: null };
+  let requests = 0, waited = 0, screen = 'carteira', seq = 0;
+  const fmt = (v) => v.toLocaleString('pt-BR');
+  const mode = () => $('input[name=fetch]:checked').value;
+  const stale = () => +$('#stale').value * 1000;
+
+  function log(text) {
+    const li = document.createElement('li'); li.className = 'new'; li.textContent = text;
+    $('#req-log').prepend(li);
+    while ($('#req-log').children.length > 6) $('#req-log').lastChild.remove();
+  }
+  function fakeFetch() {
+    requests++;
+    $('#req-count').textContent = requests;
+    log(`GET /api/clientes  (tela ${screen})`);
+    return new Promise((res) => setTimeout(() => res(server.map((c) => ({ ...c }))), 700));
+  }
+  function paint(data, status) {
+    const el = $('#screen');
+    if (!data) { el.innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div>'; }
+    else if (screen === 'carteira') {
+      el.innerHTML = `<table><tbody>${data.map((c) => `<tr><td>${esc(c.nome)}</td><td class="num">${fmt(c.sacas)} sc</td></tr>`).join('')}</tbody></table>`;
+    } else {
+      const total = data.reduce((s, c) => s + c.sacas, 0);
+      const top = [...data].sort((a, b) => b.sacas - a.sacas)[0];
+      el.innerHTML = `<div class="stats"><div class="stat"><span class="stat-n">${fmt(total)} sc</span><span class="stat-l">volume total</span></div><div class="stat"><span class="stat-n">${data.length}</span><span class="stat-l">clientes</span></div></div><p class="hint">Maior volume: ${esc(top.nome)}, com ${fmt(top.sacas)} sc. Fazenda Boa Vista: ${fmt(data[0].sacas)} sc.</p>`;
+    }
+    $('#screen-status').textContent = status || '';
+  }
+  async function load() {
+    const my = ++seq; // ignora respostas de uma tela que já foi trocada
+    const t0 = performance.now();
+    if (mode() === 'effect') {
+      paint(null, 'carregando…');
+      const d = await fakeFetch();
+      if (my !== seq) return;
+      waited += performance.now() - t0;
+      paint(d, 'buscado agora');
+    } else {
+      const fresh = cache.data && Date.now() - cache.at < stale();
+      if (cache.data) paint(cache.data, fresh ? 'do cache, ainda fresco' : 'do cache, revalidando em segundo plano…');
+      else paint(null, 'carregando…');
+      if (!fresh) {
+        if (!cache.promise) cache.promise = fakeFetch().then((d) => { cache.data = d; cache.at = Date.now(); cache.promise = null; return d; });
+        const hadData = !!cache.data;
+        const d = await cache.promise;
+        if (my !== seq) return;
+        if (!hadData) waited += performance.now() - t0;
+        paint(d, hadData ? 'revalidado' : 'buscado agora');
+      }
+    }
+    $('#wait-total').textContent = fmt(Math.round(waited)) + ' ms';
+  }
+  function show(name) {
+    screen = name;
+    $$('[data-screen]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.screen === name)));
+    load();
+  }
+  $$('[data-screen]').forEach((b) => b.addEventListener('click', () => show(b.dataset.screen)));
+  $('#sell').addEventListener('click', () => {
+    server[0].sacas += 100;
+    log('POST /api/vendas  (Fazenda Boa Vista, +100 sc)');
+    if (mode() === 'query') { cache.at = 0; load(); }
+    else $('#screen-status').textContent = 'Venda salva no servidor. Esta tela continua com o número antigo até ser montada de novo.';
+  });
+  $('#stale').addEventListener('input', (e) => { $('#stale-out').textContent = e.target.value + ' s'; });
+  $$('input[name=fetch]').forEach((r) => r.addEventListener('change', () => {
+    $('#stale-field').hidden = mode() !== 'query';
+    requests = 0; waited = 0; cache.data = null; cache.at = 0;
+    $('#req-count').textContent = '0'; $('#req-log').innerHTML = '';
+    load();
+  }));
+  $('#stale-field').hidden = true;
+  load();
+})();
+
+/* Decisão */
+Lab.decision($('#decidir'), {
+  title: 'Onde esse estado deve morar?',
+  intro: 'Pense num estado concreto que você está criando agora, como a lista de contratos, o filtro de safra ou o modal aberto.',
+  questions: [
+    { id: 'origem', text: 'De onde vem esse dado?',
+      options: [{ v: 'servidor', label: 'Da API' }, { v: 'escolha', label: 'De uma escolha na tela (filtro, aba, página)' }, { v: 'ui', label: 'Da interface (modal aberto, item em hover)' }, { v: 'form', label: 'De um formulário sendo preenchido' }] },
+    { id: 'link', text: 'Ao mandar o link para um colega, ele deveria ver a tela com a mesma escolha?', when: (a) => a.origem === 'escolha',
+      options: [{ v: 'sim', label: 'Sim' }, { v: 'nao', label: 'Não' }] },
+    { id: 'quem', text: 'Quem lê esse estado?', when: (a) => a.origem === 'ui' || (a.origem === 'escolha' && a.link === 'nao'),
+      options: [{ v: 'um', label: 'Um componente' }, { v: 'vizinhos', label: 'Componentes vizinhos' }, { v: 'muitos', label: 'Muitos, em partes distantes' }] },
+    { id: 'freq', text: 'Com que frequência ele muda?', when: (a) => a.quem === 'muitos',
+      options: [{ v: 'pouco', label: 'Raramente (login, tema)' }, { v: 'muito', label: 'Várias vezes por segundo ou a cada tecla' }] },
+  ],
+  decide(a) {
+    if (a.origem === 'servidor') return { title: 'React Query (ou SWR)', body: '<p>É uma cópia do servidor, então trate como cache: chave, tempo de validade e invalidação depois de mutações. Não copie para useState nem para um store global.</p>', code: "useQuery({ queryKey: ['contratos', { safra }], queryFn: () => api.contratos(safra) })" };
+    if (a.origem === 'form') return { title: 'Estado do formulário (React Hook Form + Zod)', body: '<p>Formulário tem estado próprio: valores, erros, campos tocados e envio em andamento. Uma biblioteca de formulário evita um re-render a cada tecla, e um schema Zod valida igual no front e no back.</p>' };
+    if (a.origem === 'escolha' && a.link === 'sim') return { title: 'Na URL, como search params', body: '<p>Filtro na URL sobrevive ao reload, pode ser compartilhado e faz o botão voltar funcionar. A URL vira a fonte da verdade e a tela lê dela.</p>', code: "const [params, setParams] = useSearchParams()\nconst safra = params.get('safra') ?? '2025/26'" };
+    if (a.quem === 'um') return { title: 'useState no próprio componente', body: '<p>É a opção mais simples e mais fácil de mudar depois. Só suba o estado quando outro componente precisar dele.</p>' };
+    if (a.quem === 'vizinhos') return { title: 'Suba até o pai comum mais próximo', body: '<p>Coloque o estado no pai e passe por props. Duas ou três camadas de props são explícitas e fáceis de rastrear.</p>' };
+    return a.freq === 'pouco'
+      ? { title: 'Context', body: '<p>Valores que mudam pouco e são lidos em muitos lugares são o caso ideal para Context. Separe contextos por assunto (AuthContext, ThemeContext) para que uma mudança não acorde quem lê outro.</p>' }
+      : { tone: 'warn', title: 'Store com seletores (Zustand)', body: '<p>Com Context, cada mudança renderiza todos os consumidores. Um store com seletores renderiza só quem lê o campo que mudou. Confira antes se esse estado precisa mesmo ser global.</p>', code: 'const cotacao = useMercado((s) => s.cotacoes[ativo])' };
+  },
+});
+</script>
+</body>
+</html>

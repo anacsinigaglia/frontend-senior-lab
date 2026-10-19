@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Decisões técnicas · Lab Frontend Sênior</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="lab.css">
+<style>
+  .matrix select { width: auto; min-width: 58px; padding: 5px 8px; font-size: 14px; }
+  .matrix input[type="range"] { width: 110px; vertical-align: middle; }
+  .matrix .w { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .matrix .w output { font: 500 13px var(--f-mono); color: var(--accent); width: 12px; }
+  .bars { display: grid; gap: 10px; }
+  .bar { display: grid; grid-template-columns: minmax(96px, 130px) minmax(0, 1fr) 46px; gap: 10px; align-items: center; font-size: 14px; }
+  .bar-track { height: 14px; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--muted); border-radius: 999px; transition: width 0.3s; }
+  .bar.win .bar-fill { background: var(--accent); }
+  .bar.win { font-weight: 700; }
+  .bar .pct { text-align: right; font: 600 13px var(--f-mono); font-variant-numeric: tabular-nums; }
+  .adr-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+  @media (max-width: 780px) { .adr-grid { grid-template-columns: minmax(0, 1fr); } }
+  .adr-grid textarea { font-family: var(--f-body); font-size: 14px; min-height: 64px; }
+  #adr-md { margin: 0; max-height: 520px; overflow: auto; white-space: pre-wrap; }
+  .review-code { margin: 0; }
+  .rc { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 10px; }
+  .rc-text { margin: 0; font-size: 15px; }
+  .rc-who { font: 600 12px var(--f-mono); color: var(--muted); margin: 0; }
+  .rc-fb { font-size: 14px; }
+  .reviews { display: grid; gap: 12px; }
+</style>
+</head>
+<body data-module="decisoes">
+<header class="topbar"><div class="wrap"><a class="brand" href="index.html"><span class="brand-mark">FS</span>Lab Frontend Sênior</a><nav class="modnav" id="modnav" aria-label="Módulos"></nav></div></header>
+
+<div class="wrap">
+  <header class="page-head">
+    <p class="eyebrow">Módulo · Decisões técnicas e liderança</p>
+    <h1>A melhor escolha depende do contexto</h1>
+    <p class="lede">O que diferencia o sênior é conseguir explicar por que escolheu uma opção e o que está abrindo mão. Aqui você pesa alternativas com critérios explícitos, registra a decisão para o time e pratica code review.</p>
+    <ul class="senior">
+      <li><b>Explicita os critérios</b>Diz "escolhi X porque o time é pequeno", não "X é melhor".</li>
+      <li><b>Deixa um registro</b>Quem chegar daqui a um ano entende o porquê sem precisar perguntar.</li>
+      <li><b>Revisa para ensinar</b>Separa o que bloqueia o merge do que é preferência pessoal.</li>
+    </ul>
+  </header>
+
+  <main>
+    <section class="lab" id="matriz">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · Matriz de trade-offs</p>
+        <h2>Context, Zustand ou Redux Toolkit?</h2>
+        <p>As notas de 1 a 5 dizem o quanto cada opção atende a cada critério. Os pesos dizem o quanto cada critério importa para o <i>seu</i> projeto. Mude os pesos ou escolha um cenário e veja a vencedora mudar.</p>
+      </div>
+      <div class="row">
+        <span class="field-label" style="margin-right:4px">Cenários:</span>
+        <button type="button" class="btn small" data-scenario="pequeno">Time de 2, app interno</button>
+        <button type="button" class="btn small" data-scenario="grande">Time de 15, app crítico</button>
+        <button type="button" class="btn small" data-scenario="tempo">Painel de cotações ao vivo</button>
+      </div>
+      <div class="table-wrap">
+        <table class="grid matrix">
+          <thead><tr><th>Critério</th><th>Peso</th><th class="num">Context</th><th class="num">Zustand</th><th class="num">Redux Toolkit</th></tr></thead>
+          <tbody id="m-body"></tbody>
+        </table>
+      </div>
+      <div class="output">
+        <div class="bars" id="m-bars"></div>
+        <p class="hint" id="m-note" style="margin:0"></p>
+      </div>
+      <p class="takeaway"><b>Leitura de sênior.</b> A matriz não decide por você. Ela mostra quais critérios estão pesando na decisão. Se uma mudança pequena de peso troca a vencedora, discuta os pesos com o time. A discussão sobre as ferramentas vem depois.</p>
+    </section>
+
+    <section class="lab" id="adr">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · ADR</p>
+        <h2>Registre a decisão em um minuto</h2>
+        <p>Um ADR (Architecture Decision Record) é uma nota curta no repositório: contexto, decisão, alternativas e consequências. Os campos já vêm preenchidos com o resultado da matriz. Edite e copie o Markdown.</p>
+      </div>
+      <div class="adr-grid">
+        <div class="controls">
+          <div class="field"><label for="adr-title">Título</label><input type="text" id="adr-title"></div>
+          <div class="field"><label for="adr-status">Status</label>
+            <select id="adr-status"><option>Proposta</option><option selected>Aceita</option><option>Substituída</option></select></div>
+          <div class="field"><label for="adr-ctx">Contexto</label><textarea id="adr-ctx"></textarea></div>
+          <div class="field"><label for="adr-dec">Decisão</label><textarea id="adr-dec"></textarea></div>
+          <div class="field"><label for="adr-alt">Alternativas consideradas</label><textarea id="adr-alt"></textarea></div>
+          <div class="field"><label for="adr-con">Consequências</label><textarea id="adr-con"></textarea></div>
+          <button type="button" class="btn ghost small" id="adr-fill" style="justify-self:start">Preencher de novo com a matriz</button>
+        </div>
+        <div class="controls">
+          <div class="row" style="justify-content:space-between"><span class="code-label" style="margin:0">docs/adr/007-gerenciamento-de-estado.md</span><button type="button" class="btn small" id="adr-copy">Copiar Markdown</button></div>
+          <pre class="code" id="adr-md"></pre>
+        </div>
+      </div>
+      <p class="takeaway"><b>Leitura de sênior.</b> Não apague um ADR antigo quando a decisão mudar. Marque como "Substituída" e aponte para o novo. O histórico de por que mudamos também tem valor.</p>
+    </section>
+
+    <section class="lab" id="review">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · Code review</p>
+        <h2>Classifique os comentários deste PR</h2>
+        <p>Quatro pessoas revisaram a função abaixo. Para cada comentário, diga se ele deve bloquear o merge, se é uma sugestão, se é um detalhe ou se precisa ser reescrito.</p>
+      </div>
+<pre class="code review-code"><span class="c">// utils/preco.ts</span>
+export function precoMedio(precos: number[]) {
+  let total = 0
+  for (let i = 0; i &lt;= precos.length; i++) total += precos[i]
+  return total / precos.length
+}</pre>
+      <div class="reviews" id="reviews"></div>
+      <p class="takeaway"><b>Leitura de sênior.</b> Marcar a intenção do comentário ("bloqueante:", "sugestão:", "nit:") evita que a pessoa autora trate tudo como obrigatório. E um comentário sobre o código nunca deve falar da pessoa.</p>
+    </section>
+
+    <section id="decidir"></section>
+  </main>
+
+  <nav class="pager" id="pager" aria-label="Navegação entre módulos"></nav>
+</div>
+
+<script src="lab.js"></script>
+<script>
+const { $, $$, esc } = Lab;
+const OPTS = ['Context API', 'Zustand', 'Redux Toolkit'];
+const CRIT = [
+  { id: 'aprender', name: 'Fácil de aprender', w: 3, s: [5, 4, 2] },
+  { id: 'boiler', name: 'Pouco código repetitivo', w: 3, s: [4, 5, 2] },
+  { id: 'perf', name: 'Desempenho com atualizações frequentes', w: 2, s: [2, 5, 4] },
+  { id: 'debug', name: 'Ferramentas de debug', w: 2, s: [1, 3, 5] },
+  { id: 'padrao', name: 'Padronização para time grande', w: 2, s: [2, 3, 5] },
+  { id: 'bundle', name: 'Pouco peso no bundle', w: 2, s: [5, 5, 2] },
+];
+const SCEN = {
+  pequeno: { aprender: 5, boiler: 4, perf: 1, debug: 1, padrao: 0, bundle: 3 },
+  grande: { aprender: 1, boiler: 1, perf: 3, debug: 5, padrao: 5, bundle: 1 },
+  tempo: { aprender: 2, boiler: 2, perf: 5, debug: 3, padrao: 2, bundle: 2 },
+};
+let lastResult = null;
+
+/* Matriz */
+function drawMatrix() {
+  $('#m-body').innerHTML = CRIT.map((c, ci) => `<tr>
+    <td>${c.name}</td>
+    <td><span class="w"><input type="range" min="0" max="5" value="${c.w}" id="w-${c.id}" aria-label="Peso de ${c.name}" data-ci="${ci}"><output for="w-${c.id}">${c.w}</output></span></td>
+    ${c.s.map((v, oi) => `<td class="num"><select id="s-${c.id}-${oi}" aria-label="Nota de ${OPTS[oi]} em ${c.name}" data-ci="${ci}" data-oi="${oi}">${[1, 2, 3, 4, 5].map((n) => `<option${n === v ? ' selected' : ''}>${n}</option>`).join('')}</select></td>`).join('')}
+  </tr>`).join('');
+  compute();
+}
+function compute() {
+  const wsum = CRIT.reduce((s, c) => s + c.w, 0) || 1;
+  const scores = OPTS.map((_, oi) => CRIT.reduce((s, c) => s + c.w * c.s[oi], 0) / (wsum * 5) * 100);
+  const order = scores.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]);
+  const win = order[0][1];
+  $('#m-bars').innerHTML = OPTS.map((o, i) => `<div class="bar${i === win ? ' win' : ''}"><span>${o}</span><div class="bar-track"><div class="bar-fill" style="width:${scores[i].toFixed(1)}%"></div></div><span class="pct">${scores[i].toFixed(0)}</span></div>`).join('');
+  const gap = order[0][0] - order[1][0];
+  const top = [...CRIT].sort((a, b) => b.w - a.w).filter((c) => c.w > 0).slice(0, 2).map((c) => c.name.toLowerCase());
+  $('#m-note').textContent = gap < 5
+    ? `Empate técnico: ${OPTS[order[0][1]]} e ${OPTS[order[1][1]]} estão a ${gap.toFixed(1)} pontos. Decida pelo que o time já conhece ou faça um protótipo curto com as duas.`
+    : `${OPTS[win]} vence por ${gap.toFixed(0)} pontos, puxada principalmente por ${top.join(' e ')}.`;
+  lastResult = { win, order, top, scores };
+}
+$('#m-body').addEventListener('input', (e) => {
+  const t = e.target, c = CRIT[+t.dataset.ci];
+  if (!c) return;
+  if (t.type === 'range') { c.w = +t.value; t.nextElementSibling.textContent = t.value; }
+  else c.s[+t.dataset.oi] = +t.value;
+  compute();
+});
+$$('[data-scenario]').forEach((b) => b.addEventListener('click', () => {
+  const sc = SCEN[b.dataset.scenario];
+  CRIT.forEach((c) => { c.w = sc[c.id]; });
+  drawMatrix();
+  fillAdr(b.textContent);
+}));
+drawMatrix();
+
+/* ADR */
+const today = new Date().toLocaleDateString('pt-BR');
+function fillAdr(scenario) {
+  const { win, order, top } = lastResult;
+  const others = order.slice(1).map(([v, i]) => `- ${OPTS[i]} (${v.toFixed(0)} pontos)`).join('\n');
+  $('#adr-title').value = `Usar ${OPTS[win]} para estado global do cliente`;
+  $('#adr-ctx').value = `${scenario ? scenario + '. ' : ''}O app precisa compartilhar estado de interface entre telas distantes. O estado vindo da API já é gerenciado pelo React Query e fica fora desta decisão. Os critérios com mais peso foram ${top.join(' e ')}.`;
+  $('#adr-dec').value = `Adotar ${OPTS[win]} para estado global do cliente. Estado local continua em useState.`;
+  $('#adr-alt').value = others;
+  $('#adr-con').value = `+ Atende melhor aos critérios de ${top.join(' e ')}.\n- Rever se o time crescer ou se o estado global passar a mudar com muita frequência.`;
+  renderAdr();
+}
+function renderAdr() {
+  const v = (id) => $(id).value.trim();
+  $('#adr-md').textContent =
+`# ADR-007: ${v('#adr-title')}
+
+- Status: ${v('#adr-status')}
+- Data: ${today}
+
+## Contexto
+${v('#adr-ctx')}
+
+## Decisão
+${v('#adr-dec')}
+
+## Alternativas consideradas
+${v('#adr-alt')}
+
+## Consequências
+${v('#adr-con')}
+`;
+}
+$$('#adr input, #adr textarea, #adr select').forEach((el) => el.addEventListener('input', renderAdr));
+$('#adr-fill').addEventListener('click', () => fillAdr());
+$('#adr-copy').addEventListener('click', (e) => Lab.copyText($('#adr-md').textContent, e.currentTarget));
+fillAdr();
+
+/* Code review */
+(() => {
+  const KINDS = [['bloq', 'Bloqueante'], ['sug', 'Sugestão'], ['nit', 'Detalhe'], ['reesc', 'Reescrever']];
+  const ITEMS = [
+    { who: 'carla · linha 3', text: 'O loop usa <= e lê precos[precos.length], que é undefined. O total vira NaN em qualquer chamada. Dá pra trocar por < e adicionar um teste com [10, 20]?',
+      ans: 'bloq', fb: 'É um bug que quebra toda chamada. Bloquear é justo, e o comentário explica o problema, mostra a evidência e sugere como provar a correção.' },
+    { who: 'rafael · linha 1', text: 'Isso tá horrível, refaz.',
+      ans: 'reesc', fb: 'Não diz o que está errado nem como melhorar, e soa pessoal. Reescrita possível: "Achei difícil acompanhar o loop. Ele lê uma posição além do fim? Se sim, o total vira NaN."' },
+    { who: 'bia · linha 2', text: 'nit: prefiro reduce aqui, mas fica a seu critério.',
+      ans: 'nit', fb: 'É preferência de estilo, e o "nit:" já sinaliza isso. Deixe o linter decidir questões de estilo sempre que der.' },
+    { who: 'leo · linha 1', text: 'Se a lista vier vazia, a divisão por zero devolve NaN. Que tal retornar null e a tela mostrar "sem preços"? Pode ser em outro PR.',
+      ans: 'sug', fb: 'Aponta um caso de borda real, propõe uma solução e deixa claro que não precisa travar este PR.' },
+  ];
+  $('#reviews').innerHTML = ITEMS.map((it, i) => `
+    <div class="rc">
+      <p class="rc-who">${it.who}</p>
+      <p class="rc-text">${esc(it.text)}</p>
+      <div class="seg" role="radiogroup" aria-label="Classificação do comentário de ${it.who}">
+        ${KINDS.map(([v, l]) => `<label><input type="radio" name="rv-${i}" value="${v}"><span>${l}</span></label>`).join('')}
+      </div>
+      <div class="rc-fb" id="rv-fb-${i}" aria-live="polite"></div>
+    </div>`).join('');
+  $('#reviews').addEventListener('change', (e) => {
+    const m = e.target.name?.match(/^rv-(\d+)$/);
+    if (!m) return;
+    const it = ITEMS[+m[1]], ok = e.target.value === it.ans;
+    const label = KINDS.find(([v]) => v === it.ans)[1];
+    $('#rv-fb-' + m[1]).innerHTML = `<div class="banner ${ok ? 'good' : 'warn'}"><b>${ok ? 'Isso mesmo.' : `Melhor resposta: ${label}.`}</b>${esc(it.fb)}</div>`;
+  });
+})();
+
+/* Decisão */
+Lab.decision($('#decidir'), {
+  title: 'Essa decisão precisa de um ADR?',
+  intro: 'Pense numa escolha recente ou próxima, como trocar a biblioteca de formulários, mudar o padrão de pastas ou adotar uma nova forma de autenticação.',
+  questions: [
+    { id: 'reverter', text: 'Dá para desfazer essa decisão em menos de um dia de trabalho?', options: [{ v: 'sim', label: 'Sim' }, { v: 'nao', label: 'Não' }] },
+    { id: 'afeta', text: 'Ela afeta outras pessoas, times ou repositórios?', options: [{ v: 'sim', label: 'Sim' }, { v: 'nao', label: 'Não, só o meu código' }] },
+    { id: 'alternativas', text: 'Alguém provavelmente vai perguntar "por que não usamos X?"', options: [{ v: 'sim', label: 'Sim' }, { v: 'nao', label: 'Não' }] },
+  ],
+  decide(a) {
+    const pts = (a.reverter === 'nao') + (a.afeta === 'sim') + (a.alternativas === 'sim');
+    if (pts === 0) return { title: 'Não precisa', body: '<p>É uma decisão local e barata de mudar. Uma linha na descrição do PR já basta. Registrar demais também atrapalha, porque as decisões importantes se perdem no meio.</p>' };
+    if (pts === 1) return { tone: 'warn', title: 'Uma nota curta basta', body: '<p>Explique o porquê na descrição do PR ou num comentário perto do código. Se a mesma pergunta aparecer duas vezes, transforme a nota em ADR.</p>' };
+    if (pts === 2) return { title: 'Escreva um ADR', body: '<p>Use o modelo acima: contexto, decisão, alternativas e consequências. Meia página resolve. Coloque em <code>docs/adr/</code> e linke no PR.</p>' };
+    return { tone: 'warn', title: 'ADR antes de implementar', body: '<p>É difícil de reverter, afeta outras pessoas e tem alternativas fortes. Escreva o ADR como "Proposta", peça revisão de quem será afetado e só implemente depois de aceito.</p><ul><li>Inclua um protótipo pequeno se houver dúvida técnica.</li><li>Diga em que situação vocês reabririam essa decisão.</li></ul>' };
+  },
+});
+</script>
+</body>
+</html>

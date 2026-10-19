@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lab Frontend Sênior</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="lab.css">
+<style>
+  .hero { padding-block: 52px 32px; display: grid; gap: 0; }
+  .hero h1 { max-width: 18ch; }
+  .loop { list-style: none; margin: 32px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); overflow: hidden; }
+  .loop li { padding: 16px 18px; display: grid; gap: 4px; font-size: 15px; color: var(--muted); }
+  .loop li + li { border-left: 1px solid var(--line); }
+  .loop b { color: var(--ink); font: 650 16px/1.25 var(--f-display); display: flex; gap: 8px; align-items: baseline; }
+  .loop .step { font: 600 11px var(--f-mono); color: var(--accent); }
+  @media (max-width: 720px) { .loop { grid-template-columns: minmax(0, 1fr); } .loop li + li { border-left: 0; border-top: 1px solid var(--line); } }
+
+  .mods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding-block: 28px 64px; }
+  @media (max-width: 920px) { .mods { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 600px) { .mods { grid-template-columns: minmax(0, 1fr); } }
+  .mod { display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); color: var(--ink); text-decoration: none; transition: border-color 0.15s, transform 0.15s; }
+  .mod:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .mod-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .mod-area { font: 600 12px var(--f-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+  .mod h2 { font-size: 21px; }
+  .mod ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 15px; display: grid; gap: 3px; }
+  .mod-q { margin: 0; padding-top: 10px; border-top: 1px dashed var(--line); font-size: 14px; }
+  .mod-q span { font: 600 11px var(--f-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; display: block; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="wrap"><a class="brand" href="index.html"><span class="brand-mark">FS</span>Lab Frontend Sênior</a></div></header>
+
+<div class="wrap">
+  <header class="hero">
+    <p class="eyebrow">Laboratório de estudo</p>
+    <h1>Como um frontend sênior pensa, em código para mexer</h1>
+    <p class="lede">Seis módulos, um por assunto. Em cada um você provoca o problema, mede o efeito e termina com um roteiro de perguntas que leva a uma recomendação para o seu caso.</p>
+    <ol class="loop">
+      <li><b><span class="step">1</span>Mexa</b>Cada experimento roda de verdade no seu navegador: tempo, requisições e scripts são reais.</li>
+      <li><b><span class="step">2</span>Leia o código</b>Abaixo de cada experimento, a versão que funciona ao lado da versão com problema.</li>
+      <li><b><span class="step">3</span>Decida</b>No fim do módulo, responda sobre um caso real seu e receba a recomendação com a justificativa.</li>
+    </ol>
+  </header>
+
+  <section class="mods" aria-label="Módulos">
+    <a class="mod" href="performance.html" data-slug="performance">
+      <div class="mod-top"><span class="mod-area">Performance</span><span class="pill good" hidden>visitado</span></div>
+      <h2>Meça antes de otimizar</h2>
+      <ul><li>Debounce numa busca de clientes</li><li>50 mil linhas com e sem virtualização</li><li>Layout thrashing medido em ms</li></ul>
+      <p class="mod-q"><span>Decisão</span>Vale a pena otimizar isso?</p>
+    </a>
+    <a class="mod" href="seguranca.html" data-slug="seguranca">
+      <div class="mod-top"><span class="mod-area">Segurança</span><span class="pill good" hidden>visitado</span></div>
+      <h2>Todo dado que vem de fora é suspeito</h2>
+      <ul><li>Um ataque XSS que rouba o token</li><li>localStorage, memória ou cookie httpOnly</li><li>Links com <code>javascript:</code> disfarçado</li></ul>
+      <p class="mod-q"><span>Decisão</span>Onde guardo a autenticação?</p>
+    </a>
+    <a class="mod" href="semantica.html" data-slug="semantica">
+      <div class="mod-top"><span class="mod-area">Semântica e a11y</span><span class="pill good" hidden>visitado</span></div>
+      <h2>A tag certa já resolve metade do trabalho</h2>
+      <ul><li>Div ou botão, testado no teclado</li><li>O que o leitor de tela anuncia</li><li>Contraste pela regra da WCAG</li></ul>
+      <p class="mod-q"><span>Decisão</span>Qual elemento eu uso?</p>
+    </a>
+    <a class="mod" href="arquitetura.html" data-slug="arquitetura">
+      <div class="mod-top"><span class="mod-area">Arquitetura e estado</span><span class="pill good" hidden>visitado</span></div>
+      <h2>Cada estado tem um lugar certo</h2>
+      <ul><li>Props, Context ou store: quem renderiza</li><li>Cache de servidor entre duas telas</li><li>Invalidação depois de uma venda</li></ul>
+      <p class="mod-q"><span>Decisão</span>Onde esse estado deve morar?</p>
+    </a>
+    <a class="mod" href="qualidade.html" data-slug="qualidade">
+      <div class="mod-top"><span class="mod-area">Qualidade e testes</span><span class="pill good" hidden>visitado</span></div>
+      <h2>Código que impede o erro de acontecer</h2>
+      <ul><li>Três booleanos contra um status</li><li>Testes que quebram na refatoração</li><li>Testes que deixam o bug passar</li></ul>
+      <p class="mod-q"><span>Decisão</span>Que teste escrevo para isso?</p>
+    </a>
+    <a class="mod" href="decisoes.html" data-slug="decisoes">
+      <div class="mod-top"><span class="mod-area">Decisões técnicas</span><span class="pill good" hidden>visitado</span></div>
+      <h2>A melhor escolha depende do contexto</h2>
+      <ul><li>Matriz de trade-offs com pesos</li><li>Gerador de ADR em Markdown</li><li>Classificar comentários de code review</li></ul>
+      <p class="mod-q"><span>Decisão</span>Essa decisão precisa de um ADR?</p>
+    </a>
+  </section>
+</div>
+
+<script src="lab.js"></script>
+<script>
+  const seen = Lab.store('lab-visited') || {};
+  Lab.$$('.mod').forEach((card) => {
+    if (seen[card.dataset.slug]) card.querySelector('.pill').hidden = false;
+  });
+</script>
+</body>
+</html>

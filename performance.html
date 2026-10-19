@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Performance · Lab Frontend Sênior</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="lab.css">
+<style>
+  #list-box { height: 288px; overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; position: relative; }
+  .vrow { height: 32px; line-height: 32px; padding: 0 12px; border-bottom: 1px solid var(--line); font: 13px/32px var(--f-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #thr-area { display: flex; flex-wrap: wrap; gap: 2px; max-height: 120px; overflow: hidden; }
+  .tbox { height: 8px; background: var(--accent); opacity: 0.55; border-radius: 2px; }
+</style>
+</head>
+<body data-module="performance">
+<header class="topbar"><div class="wrap"><a class="brand" href="index.html"><span class="brand-mark">FS</span>Lab Frontend Sênior</a><nav class="modnav" id="modnav" aria-label="Módulos"></nav></div></header>
+
+<div class="wrap">
+  <header class="page-head">
+    <p class="eyebrow">Módulo · Performance</p>
+    <h1>Meça antes de otimizar</h1>
+    <p class="lede">Otimizar sem medir só deixa o código mais complexo. Aqui você provoca três problemas clássicos, vê o número mudar e entende qual ferramenta resolve cada um.</p>
+    <ul class="senior">
+      <li><b>Começa pelo sintoma</b>Pergunta o que está lento e para quem antes de escrever um useMemo.</li>
+      <li><b>Sabe onde o tempo vai</b>Distingue rede, JavaScript, layout e pintura no painel Performance.</li>
+      <li><b>Escolhe a ferramenta mais barata</b>Debounce e paginação resolvem mais casos do que bibliotecas novas.</li>
+    </ul>
+  </header>
+
+  <main>
+    <section class="lab" id="debounce">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · Debounce</p>
+        <h2>Quantas buscas cada tecla dispara?</h2>
+        <p>Um campo de busca que chama a API a cada tecla sobrecarrega o servidor e mostra resultados piscando. Digite com e sem debounce e compare o número de requisições.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <label for="deb-input">Buscar cliente</label>
+            <input id="deb-input" type="text" placeholder="ex.: fazenda boa vista" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="deb-ms">Espera do debounce <output id="deb-ms-out" for="deb-ms">sem debounce</output></label>
+            <input id="deb-ms" type="range" min="0" max="800" step="50" value="0">
+          </div>
+          <p class="hint">Digite a mesma frase com 0 ms e depois com 300 ms.</p>
+          <button type="button" class="btn ghost small" id="deb-reset" style="justify-self:start">Zerar contadores</button>
+        </div>
+        <div class="output">
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="deb-keys">0</span><span class="stat-l">teclas</span></div>
+            <div class="stat"><span class="stat-n" id="deb-calls">0</span><span class="stat-l">requisições</span></div>
+            <div class="stat"><span class="stat-n" id="deb-saved">0%</span><span class="stat-l">evitadas</span></div>
+          </div>
+          <ol class="log" id="deb-log" data-empty="As requisições aparecem aqui."></ol>
+        </div>
+      </div>
+      <details class="src">
+        <summary>Ver o código</summary>
+<pre class="code"><span class="c">// Espera a pessoa parar de digitar por `ms` antes de chamar fn</span>
+function debounce(fn, ms) {
+  let timer
+  return (...args) =&gt; {
+    clearTimeout(timer)                       <span class="c">// cada tecla cancela a anterior</span>
+    timer = setTimeout(() =&gt; fn(...args), ms)
+  }
+}
+
+<span class="c">// Em React, o equivalente é debounçar o valor:</span>
+const [busca, setBusca] = useState('')
+const buscaAtrasada = useDebouncedValue(busca, 300)
+const { data } = useQuery({
+  queryKey: ['clientes', buscaAtrasada],
+  queryFn: () =&gt; api.clientes(buscaAtrasada),
+})</pre>
+      </details>
+      <p class="takeaway"><b>Leitura de sênior.</b> Debounce resolve chamadas caras disparadas por eventos frequentes (busca, resize, autosave). Se o custo é renderizar e não chamar a rede, prefira <code>useDeferredValue</code>, que mantém o campo responsivo sem atrasar o que a pessoa digita.</p>
+    </section>
+
+    <section class="lab" id="lista">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · Virtualização</p>
+        <h2>Uma tabela com 50 mil linhas</h2>
+        <p>O navegador precisa criar, estilizar e posicionar cada elemento do DOM. Virtualizar significa desenhar só as linhas visíveis. Aumente o número de linhas e compare o tempo e a quantidade de elementos.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <label for="list-n">Linhas <output id="list-n-out" for="list-n">10.000 linhas</output></label>
+            <input id="list-n" type="range" min="500" max="50000" step="500" value="10000">
+          </div>
+          <div class="field">
+            <span class="field-label">Estratégia</span>
+            <div class="seg" role="radiogroup" aria-label="Estratégia de renderização">
+              <label><input type="radio" name="list-mode" value="all" checked><span>Renderizar tudo</span></label>
+              <label><input type="radio" name="list-mode" value="virtual"><span>Virtualizar</span></label>
+            </div>
+          </div>
+          <button type="button" class="btn primary" id="list-run" style="justify-self:start">Renderizar de novo</button>
+          <p class="hint">Role a lista nos dois modos. No modo virtual, o número de elementos continua pequeno.</p>
+        </div>
+        <div class="output">
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="list-time">–</span><span class="stat-l">tempo de render + layout</span></div>
+            <div class="stat"><span class="stat-n" id="list-nodes">–</span><span class="stat-l">elementos no DOM</span></div>
+          </div>
+          <div id="list-box" tabindex="0" aria-label="Lista de contratos"></div>
+        </div>
+      </div>
+      <details class="src">
+        <summary>Ver o código</summary>
+<pre class="code"><span class="c">// Virtualização na mão: só desenha o que cabe na janela</span>
+const ALTURA = 32
+const inicio = Math.floor(caixa.scrollTop / ALTURA)
+const fim = inicio + Math.ceil(caixa.clientHeight / ALTURA)
+espacador.style.height = total * ALTURA + 'px'   <span class="c">// mantém a barra de rolagem real</span>
+for (let i = inicio; i &lt; fim; i++) desenhaLinha(i, i * ALTURA)
+
+<span class="c">// Na prática: @tanstack/react-virtual</span>
+const v = useVirtualizer({ count: linhas.length, getScrollElement: () =&gt; ref.current, estimateSize: () =&gt; 32 })
+v.getVirtualItems().map(item =&gt; &lt;Linha key={item.key} style={{ transform: `translateY(${item.start}px)` }} /&gt;)</pre>
+      </details>
+      <p class="takeaway"><b>Leitura de sênior.</b> Antes de virtualizar, pergunte se alguém precisa ver 50 mil linhas. Paginação ou filtro no servidor costumam ser a resposta melhor. Virtualização tem custos: o Ctrl+F do navegador não encontra o que está fora da tela e alturas variáveis complicam o cálculo.</p>
+    </section>
+
+    <section class="lab" id="thrashing">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · Layout thrashing</p>
+        <h2>Ler e escrever no DOM, intercalado ou em lote</h2>
+        <p>Ler uma medida como <code>offsetWidth</code> logo depois de mudar um estilo obriga o navegador a recalcular o layout na hora. Num loop, isso vira centenas de recálculos. Rode os dois modos e compare.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <label for="thr-n">Elementos <output id="thr-n-out" for="thr-n">800 elementos</output></label>
+            <input id="thr-n" type="range" min="100" max="2000" step="100" value="800">
+          </div>
+          <div class="row">
+            <button type="button" class="btn" id="thr-inter-run">Intercalado</button>
+            <button type="button" class="btn primary" id="thr-batch-run">Em lote</button>
+          </div>
+        </div>
+        <div class="output">
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="thr-inter">–</span><span class="stat-l">intercalado</span></div>
+            <div class="stat"><span class="stat-n" id="thr-batch">–</span><span class="stat-l">em lote</span></div>
+            <div class="stat"><span class="stat-n" id="thr-ratio">–</span><span class="stat-l">diferença</span></div>
+          </div>
+          <div id="thr-area" aria-hidden="true"></div>
+        </div>
+      </div>
+      <div class="code-pair">
+        <div><p class="code-label">Intercalado: força layout a cada volta</p>
+<pre class="code">for (const el of caixas) {
+  const w = el.offsetWidth          <span class="no">// lê (força layout)</span>
+  el.style.width = w + 10 + 'px'    <span class="no">// escreve (invalida)</span>
+}</pre></div>
+        <div><p class="code-label">Em lote: um layout só</p>
+<pre class="code">const larguras = caixas.map(el =&gt; el.offsetWidth)  <span class="ok">// lê tudo</span>
+caixas.forEach((el, i) =&gt; {
+  el.style.width = larguras[i] + 10 + 'px'          <span class="ok">// escreve tudo</span>
+})</pre></div>
+      </div>
+      <p class="takeaway"><b>Leitura de sênior.</b> Em React você raramente escreve esse loop, mas ele aparece em animações feitas à mão, em <code>useLayoutEffect</code> e em bibliotecas de terceiros. No painel Performance do DevTools, ele aparece como blocos roxos de "Layout" com o aviso <i>Forced reflow</i>.</p>
+    </section>
+
+    <section id="decidir"></section>
+  </main>
+
+  <nav class="pager" id="pager" aria-label="Navegação entre módulos"></nav>
+</div>
+
+<script src="lab.js"></script>
+<script>
+const { $, $$ } = Lab;
+
+/* Debounce */
+(() => {
+  const input = $('#deb-input'), range = $('#deb-ms'), out = $('#deb-ms-out'), log = $('#deb-log');
+  let keys = 0, calls = 0, timer = null;
+  const update = () => {
+    $('#deb-keys').textContent = keys;
+    $('#deb-calls').textContent = calls;
+    $('#deb-saved').textContent = keys ? Math.max(0, Math.round((1 - calls / keys) * 100)) + '%' : '0%';
+  };
+  function fire() {
+    calls++;
+    const li = document.createElement('li');
+    li.className = 'new';
+    li.textContent = `GET /api/clientes?q="${input.value}"`;
+    log.prepend(li);
+    while (log.children.length > 8) log.lastChild.remove();
+    update();
+  }
+  input.addEventListener('input', () => {
+    keys++;
+    const ms = +range.value;
+    clearTimeout(timer);
+    if (ms === 0) fire(); else timer = setTimeout(fire, ms);
+    update();
+  });
+  range.addEventListener('input', () => { out.textContent = range.value === '0' ? 'sem debounce' : range.value + ' ms'; });
+  $('#deb-reset').addEventListener('click', () => {
+    keys = calls = 0; clearTimeout(timer); log.innerHTML = ''; input.value = ''; update(); input.focus();
+  });
+})();
+
+/* Virtualização */
+(() => {
+  const ROW = 32, box = $('#list-box'), n = $('#list-n'), nOut = $('#list-n-out');
+  const farms = ['Fazenda Boa Vista', 'Sítio Santa Rita', 'Fazenda Três Irmãos', 'Agropecuária Serra Azul', 'Fazenda São Jorge', 'Sítio Primavera'];
+  const text = (i) => `#${String(i + 1).padStart(5, '0')} · ${farms[i % farms.length]} · ${((i * 37) % 2000 + 100).toLocaleString('pt-BR')} sc soja`;
+  let onScroll = null;
+  const fmt = (v) => v.toLocaleString('pt-BR');
+  const countNodes = () => { $('#list-nodes').textContent = fmt(box.getElementsByTagName('*').length); };
+
+  function render() {
+    const total = +n.value;
+    const mode = $('input[name=list-mode]:checked').value;
+    if (onScroll) { box.removeEventListener('scroll', onScroll); onScroll = null; }
+    box.scrollTop = 0;
+    const t0 = performance.now();
+    box.textContent = '';
+    if (mode === 'all') {
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < total; i++) {
+        const d = document.createElement('div');
+        d.className = 'vrow'; d.textContent = text(i);
+        frag.appendChild(d);
+      }
+      box.appendChild(frag);
+    } else {
+      const spacer = document.createElement('div');
+      spacer.style.cssText = `height:${total * ROW}px;position:relative`;
+      box.appendChild(spacer);
+      const draw = () => {
+        const start = Math.max(0, Math.floor(box.scrollTop / ROW) - 4);
+        const end = Math.min(total, Math.ceil((box.scrollTop + box.clientHeight) / ROW) + 4);
+        spacer.textContent = '';
+        for (let i = start; i < end; i++) {
+          const d = document.createElement('div');
+          d.className = 'vrow';
+          d.style.cssText = `position:absolute;left:0;right:0;top:${i * ROW}px`;
+          d.textContent = text(i);
+          spacer.appendChild(d);
+        }
+        countNodes();
+      };
+      draw();
+      onScroll = () => requestAnimationFrame(draw);
+      box.addEventListener('scroll', onScroll, { passive: true });
+    }
+    void box.scrollHeight; // força o layout para medir o custo real
+    $('#list-time').textContent = (performance.now() - t0).toFixed(1) + ' ms';
+    countNodes();
+  }
+  n.addEventListener('input', () => { nOut.textContent = fmt(+n.value) + ' linhas'; });
+  n.addEventListener('change', render);
+  $('#list-run').addEventListener('click', render);
+  $$('input[name=list-mode]').forEach((r) => r.addEventListener('change', render));
+  render();
+})();
+
+/* Layout thrashing */
+(() => {
+  const area = $('#thr-area'), n = $('#thr-n'), nOut = $('#thr-n-out');
+  const result = { inter: null, batch: null };
+  function build() {
+    area.textContent = '';
+    for (let i = 0; i < +n.value; i++) {
+      const b = document.createElement('span');
+      b.className = 'tbox'; b.style.width = (10 + (i % 20)) + 'px';
+      area.appendChild(b);
+    }
+    nOut.textContent = n.value + ' elementos';
+    result.inter = result.batch = null;
+    $('#thr-inter').textContent = $('#thr-batch').textContent = $('#thr-ratio').textContent = '–';
+  }
+  function run(kind) {
+    const els = [...area.children];
+    const t0 = performance.now();
+    if (kind === 'inter') {
+      for (const el of els) { const w = el.offsetWidth; el.style.width = (w % 30) + 10 + 'px'; }
+    } else {
+      const ws = els.map((el) => el.offsetWidth);
+      els.forEach((el, i) => { el.style.width = (ws[i] % 30) + 10 + 'px'; });
+    }
+    void area.offsetHeight;
+    const ms = performance.now() - t0;
+    result[kind] = ms;
+    $(kind === 'inter' ? '#thr-inter' : '#thr-batch').textContent = ms.toFixed(1) + ' ms';
+    if (result.inter && result.batch) {
+      $('#thr-ratio').textContent = (result.inter / Math.max(result.batch, 0.1)).toFixed(0) + '×';
+    }
+  }
+  n.addEventListener('input', build);
+  $('#thr-inter-run').addEventListener('click', () => run('inter'));
+  $('#thr-batch-run').addEventListener('click', () => run('batch'));
+  build();
+})();
+
+/* Decisão */
+Lab.decision($('#decidir'), {
+  title: 'Vale a pena otimizar isso?',
+  intro: 'Responda sobre um caso real do seu sistema. O roteiro segue a ordem que um sênior usa: medir, localizar o sintoma e só então escolher a ferramenta.',
+  questions: [
+    { id: 'medido', text: 'Você mediu o problema?', hint: 'DevTools Performance, React Profiler, Lighthouse ou Web Vitals de produção.',
+      options: [{ v: 'sim', label: 'Sim, tenho números' }, { v: 'nao', label: 'Ainda não, só parece lento' }] },
+    { id: 'sintoma', text: 'Onde a lentidão aparece?', when: (a) => a.medido === 'sim',
+      options: [{ v: 'digitar', label: 'Ao digitar ou filtrar' }, { v: 'lista', label: 'Lista ou tabela grande' }, { v: 'abrir', label: 'Ao abrir a página' }, { v: 'animar', label: 'Animação engasgando' }] },
+    { id: 'digitar', text: 'O que cada tecla dispara?', when: (a) => a.sintoma === 'digitar',
+      options: [{ v: 'rede', label: 'Uma requisição' }, { v: 'render', label: 'Re-render de uma lista pesada' }] },
+    { id: 'lista', text: 'Quantos itens a pessoa realmente precisa ver de uma vez?', when: (a) => a.sintoma === 'lista',
+      options: [{ v: 'poucos', label: 'Até 200' }, { v: 'medio', label: '200 a 5 mil' }, { v: 'muitos', label: 'Mais de 5 mil' }] },
+    { id: 'abrir', text: 'O que pesa mais no carregamento?', hint: 'Veja a aba Network e o relatório do Lighthouse.', when: (a) => a.sintoma === 'abrir',
+      options: [{ v: 'js', label: 'JavaScript grande' }, { v: 'img', label: 'Imagens' }, { v: 'api', label: 'Espera da API' }] },
+    { id: 'animar', text: 'Qual propriedade a animação muda?', when: (a) => a.sintoma === 'animar',
+      options: [{ v: 'layout', label: 'top, left, width ou height' }, { v: 'transform', label: 'transform ou opacity' }] },
+  ],
+  decide(a) {
+    if (a.medido === 'nao') return { tone: 'warn', title: 'Meça primeiro',
+      body: '<p>Sem número de antes, você não sabe se melhorou. Grave 5 segundos no painel Performance fazendo a ação lenta e procure tarefas longas (acima de 50 ms).</p><ul><li>Em React, use o Profiler para ver qual componente renderiza demais.</li><li>Anote o número de antes: ele vai para a descrição do PR.</li></ul>' };
+    if (a.sintoma === 'digitar') return a.digitar === 'rede'
+      ? { title: 'Debounce na busca e cache das respostas', body: '<p>Espere 250 a 400 ms sem digitação antes de buscar e deixe o React Query guardar as respostas por chave. Ao apagar uma letra, o resultado volta do cache na hora.</p>', code: "const q = useDebouncedValue(busca, 300)\nuseQuery({ queryKey: ['clientes', q], queryFn: ..., placeholderData: keepPreviousData })" }
+      : { title: 'Separe o campo do resultado pesado', body: '<p>O campo precisa responder na hora e a lista pode atualizar depois. Use <code>useDeferredValue</code> e envolva a lista em <code>memo</code> para que ela só recalcule quando o valor adiado mudar.</p>', code: 'const adiado = useDeferredValue(filtro)\nconst itens = useMemo(() => filtrar(dados, adiado), [dados, adiado])' };
+    if (a.sintoma === 'lista') return {
+      poucos: { tone: 'warn', title: 'O problema provavelmente não é o tamanho', body: '<p>200 linhas renderizam rápido. Procure re-renders desnecessários: keys instáveis (índice do array), objetos criados inline como props, ou um estado global que muda a cada segundo.</p>' },
+      medio: { title: 'Paginação no servidor, ou virtualização', body: '<p>Pergunte ao produto se a pessoa precisa rolar tudo. Se precisa, use <code>@tanstack/react-virtual</code>. Se não, pagine ou filtre no backend e o problema desaparece.</p>' },
+      muitos: { title: 'Paginação no servidor obrigatória', body: '<p>Trazer mais de 5 mil itens pesa na rede e na memória antes de pesar no DOM. Pagine com cursor no backend e virtualize só a janela carregada.</p>' },
+    }[a.lista];
+    if (a.sintoma === 'abrir') return {
+      js: { title: 'Divida o bundle por rota', body: '<p>Carregue telas e bibliotecas pesadas (gráficos, editores) com <code>lazy()</code>. Rode o analisador do bundle para encontrar dependências duplicadas ou importadas inteiras.</p>', code: "const Relatorio = lazy(() => import('./Relatorio'))" },
+      img: { title: 'Imagens no tamanho e formato certos', body: '<p>Use AVIF ou WebP, defina <code>width</code>/<code>height</code> para não deslocar o layout, <code>loading="lazy"</code> abaixo da dobra e <code>srcset</code> para telas pequenas.</p>' },
+      api: { tone: 'warn', title: 'Mostre algo enquanto espera', body: '<p>Inicie as requisições em paralelo (sem cascata de useEffect), mostre skeleton e faça prefetch ao passar o mouse no link. Se a API demora mais de 1 s, leve o caso para o backend com os números.</p>' },
+    }[a.abrir];
+    return a.animar === 'layout'
+      ? { title: 'Anime só transform e opacity', body: '<p>Mudar <code>top</code> ou <code>width</code> recalcula o layout a cada quadro. <code>transform</code> e <code>opacity</code> rodam na GPU e não custam layout.</p>', code: '.painel { transition: transform 200ms }\n.painel.aberto { transform: translateX(0) }' }
+      : { tone: 'warn', title: 'A thread principal está ocupada', body: '<p>Se a animação já usa transform e mesmo assim engasga, algum JavaScript está rodando ao mesmo tempo. Procure tarefas longas no painel Performance durante a animação.</p>' };
+  },
+});
+</script>
+</body>
+</html>

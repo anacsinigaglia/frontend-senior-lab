@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Qualidade e testes · Lab Frontend Sênior</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="lab.css">
+<style>
+  .twin { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 780px) { .twin { grid-template-columns: minmax(0, 1fr); } }
+  .twin-col { display: grid; gap: 12px; align-content: start; min-width: 0; }
+  .flags { display: flex; flex-wrap: wrap; gap: 6px 16px; font: 13px var(--f-mono); }
+  .flags label { display: flex; gap: 6px; align-items: center; }
+  .phone { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-height: 150px; display: grid; gap: 8px; align-content: start; }
+  .phone h3 { font-size: 15px; }
+  .spin { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--muted); }
+  .spin::before { content: ""; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: rot 0.8s linear infinite; }
+  @keyframes rot { to { transform: rotate(360deg); } }
+  .mini-row { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  .empty { font-size: 14px; color: var(--muted); }
+  .cmp { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .cmp p, .cmp output { margin: 0; font: 650 20px var(--f-display); font-variant-numeric: tabular-nums; }
+  .cmp button { font: 600 14px var(--f-body); padding: 9px 13px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); border: 0; cursor: pointer; }
+  .cmp button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .results { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+  .results li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 8px; padding: 6px 9px; border-radius: 6px; font-size: 14px; background: var(--surface); border: 1px solid var(--line); }
+  .results .mark { font: 700 13px var(--f-mono); }
+  .results li.pass .mark { color: var(--good); }
+  .results li.fail { background: var(--bad-soft); border-color: transparent; }
+  .results li.fail .mark { color: var(--bad); }
+  .results .err { grid-column: 2; font: 12px var(--f-mono); color: var(--bad); }
+  .suite-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+</style>
+</head>
+<body data-module="qualidade">
+<header class="topbar"><div class="wrap"><a class="brand" href="index.html"><span class="brand-mark">FS</span>Lab Frontend Sênior</a><nav class="modnav" id="modnav" aria-label="Módulos"></nav></div></header>
+
+<div class="wrap">
+  <header class="page-head">
+    <p class="eyebrow">Módulo · Qualidade e testes</p>
+    <h1>Código que impede o erro de acontecer</h1>
+    <p class="lede">Qualidade não é ter 100% de cobertura. É escrever tipos que não deixam montar um estado inválido e testes que quebram quando o comportamento quebra, e só nessa hora.</p>
+    <ul class="senior">
+      <li><b>Modela estados com tipos</b>Usa uma união de status em vez de três booleanos que podem se contradizer.</li>
+      <li><b>Testa o que a pessoa vê</b>Busca por texto e papel, não por classe CSS ou variável interna.</li>
+      <li><b>Lembra dos estados esquecidos</b>Carregando, erro e vazio são telas, não detalhes.</li>
+    </ul>
+  </header>
+
+  <main>
+    <section class="lab" id="estados">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · Estados impossíveis</p>
+        <h2>Três booleanos ou um status?</h2>
+        <p>À esquerda, a tela é controlada por <code>isLoading</code>, <code>isError</code> e <code>data</code>, que podem ser ligados em qualquer combinação. À direita, um único <code>status</code> só permite estados válidos. Ligue as flags e procure combinações que não fazem sentido.</p>
+      </div>
+      <div class="twin">
+        <div class="twin-col output">
+          <p class="code-label">Três booleanos: 2³ = 8 combinações</p>
+          <div class="flags">
+            <label><input type="checkbox" id="b-loading" checked> isLoading</label>
+            <label><input type="checkbox" id="b-error" checked> isError</label>
+            <label><input type="checkbox" id="b-data"> data</label>
+          </div>
+          <div class="phone" id="bool-phone"></div>
+          <div id="bool-verdict"></div>
+        </div>
+        <div class="twin-col output">
+          <p class="code-label">Um status: 4 estados, todos válidos</p>
+          <div class="seg" role="radiogroup" aria-label="Status">
+            <label><input type="radio" name="st" value="loading"><span>loading</span></label>
+            <label><input type="radio" name="st" value="error"><span>error</span></label>
+            <label><input type="radio" name="st" value="empty"><span>empty</span></label>
+            <label><input type="radio" name="st" value="success" checked><span>success</span></label>
+          </div>
+          <div class="phone" id="union-phone"></div>
+          <div class="banner good"><b>Impossível montar uma tela contraditória.</b>E o TypeScript só deixa ler <code>data</code> dentro do caso <code>success</code>.</div>
+        </div>
+      </div>
+      <div class="code-pair">
+        <div><p class="code-label">Permite estados impossíveis</p>
+<pre class="code">type Estado = {
+  isLoading: boolean
+  isError: boolean
+  data?: Contrato[]
+}
+<span class="no">// { isLoading: true, isError: true, data: [...] } compila</span></pre></div>
+        <div><p class="code-label">União discriminada</p>
+<pre class="code">type Estado =
+  | { status: 'loading' }
+  | { status: 'error'; erro: string }
+  | { status: 'empty' }
+  | { status: 'success'; data: Contrato[] }
+
+switch (estado.status) {
+  case 'success': return &lt;Lista itens={estado.data} /&gt;  <span class="ok">// data só existe aqui</span>
+  ...
+}</pre></div>
+      </div>
+      <p class="takeaway"><b>Leitura de sênior.</b> O React Query já devolve <code>status</code> como união. O ponto aqui é levar a mesma ideia para os seus próprios tipos: etapa de um wizard, situação de um contrato, permissão de usuário. Se dois campos não podem ser verdadeiros ao mesmo tempo, o tipo deveria impedir isso.</p>
+    </section>
+
+    <section class="lab" id="testes">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · Testes</p>
+        <h2>Qual teste quebra numa refatoração?</h2>
+        <p>Um contador de sacas tem três versões: a original, uma refatoração que muda só o código interno e uma com um bug real (o número não atualiza na tela). Rode as duas suítes contra cada versão. Um bom teste falha no bug e passa na refatoração.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <span class="field-label">Versão do componente</span>
+            <div class="seg" role="radiogroup" aria-label="Versão">
+              <label><input type="radio" name="ver" value="v1" checked><span>v1 original</span></label>
+              <label><input type="radio" name="ver" value="v2"><span>v2 refatorada</span></label>
+              <label><input type="radio" name="ver" value="v3"><span>v3 com bug</span></label>
+            </div>
+          </div>
+          <p class="hint" id="ver-desc"></p>
+          <div id="live"></div>
+          <button type="button" class="btn primary" id="run-tests" style="justify-self:start">Rodar as duas suítes</button>
+          <div id="test-verdict"></div>
+        </div>
+        <div class="output">
+          <div class="suite-title"><p class="code-label" style="margin:0">Testa implementação</p><span id="impl-score"></span></div>
+          <ul class="results" id="impl-results"></ul>
+          <div class="suite-title"><p class="code-label" style="margin:0">Testa comportamento</p><span id="beh-score"></span></div>
+          <ul class="results" id="beh-results"></ul>
+        </div>
+      </div>
+      <div class="code-pair">
+        <div><p class="code-label">Acoplado à implementação</p>
+<pre class="code">it('clicar em .btn-add soma 10', () =&gt; {
+  const { container } = render(&lt;Contador /&gt;)
+  container.querySelector('.btn-add').click()
+  expect(instancia.state.count).toBe(10)   <span class="no">// detalhe interno</span>
+})</pre></div>
+        <div><p class="code-label">Pelo que a pessoa vê (Testing Library)</p>
+<pre class="code">it('mostra 10 sacas ao registrar uma venda', async () =&gt; {
+  render(&lt;Contador /&gt;)
+  await user.click(screen.getByRole('button', { name: /registrar venda/i }))
+  expect(screen.getByText(/10 sacas/)).toBeInTheDocument()  <span class="ok">// resultado visível</span>
+})</pre></div>
+      </div>
+      <p class="takeaway"><b>Leitura de sênior.</b> Teste que quebra em toda refatoração ensina o time a ignorar teste vermelho. E buscar por papel e nome acessível testa a acessibilidade de graça: se <code>getByRole('button')</code> não encontra o elemento, um leitor de tela também não encontra.</p>
+    </section>
+
+    <section id="decidir"></section>
+  </main>
+
+  <nav class="pager" id="pager" aria-label="Navegação entre módulos"></nav>
+</div>
+
+<script src="lab.js"></script>
+<script>
+const { $, $$, esc } = Lab;
+
+/* Estados */
+(() => {
+  const LIST = '<div class="mini-row"><span>Contrato 2025-118 · soja</span><span>1.200 sc</span></div><div class="mini-row"><span>Contrato 2025-121 · milho</span><span>3.400 sc</span></div>';
+  const ERR = '<div class="banner bad"><b>Não foi possível carregar os contratos.</b>Verifique a conexão e tente de novo.</div>';
+  const LOAD = '<span class="spin">Carregando contratos…</span>';
+  function bools() {
+    const l = $('#b-loading').checked, e = $('#b-error').checked, d = $('#b-data').checked;
+    $('#bool-phone').innerHTML = '<h3>Contratos</h3>' + (l ? LOAD : '') + (e ? ERR : '') + (d ? LIST : '') + (!l && !e && !d ? '<span class="empty">(nada na tela: nenhuma flag cobre "lista vazia")</span>' : '');
+    const on = [l, e, d].filter(Boolean).length;
+    $('#bool-verdict').innerHTML = on > 1
+      ? '<div class="banner bad"><b>Estado impossível.</b>A tela mostra duas situações ao mesmo tempo, e o tipo deixou.</div>'
+      : on === 0 ? '<div class="banner warn"><b>Estado ambíguo.</b>Ainda não carregou ou a lista está vazia? Os booleanos não dizem.</div>'
+      : '<div class="banner good"><b>Estado válido.</b>Mas só porque você tomou cuidado: o tipo não ajudou.</div>';
+  }
+  function union() {
+    const s = $('input[name=st]:checked').value;
+    $('#union-phone').innerHTML = '<h3>Contratos</h3>' + {
+      loading: LOAD, error: ERR, success: LIST,
+      empty: '<span class="empty">Nenhum contrato nesta safra. <a href="#estados">Cadastrar o primeiro</a></span>',
+    }[s];
+  }
+  ['#b-loading', '#b-error', '#b-data'].forEach((s) => $(s).addEventListener('change', bools));
+  $$('input[name=st]').forEach((r) => r.addEventListener('change', union));
+  bools(); union();
+})();
+
+/* Testes */
+(() => {
+  const LIMIT = 30;
+  const IMPLS = {
+    v1: { desc: 'Original: guarda state.count e usa as classes .counter-value e .btn-add.',
+      mount(el) {
+        const inst = { state: { count: 0 } };
+        const draw = () => {
+          el.innerHTML = `<div class="cmp"><p class="counter-value">${inst.state.count} sacas vendidas</p><button type="button" class="btn-add"${inst.state.count >= LIMIT ? ' disabled' : ''}>Registrar venda (+10)</button></div>`;
+          el.querySelector('.btn-add').onclick = () => { inst.state.count += 10; draw(); };
+        };
+        draw(); return inst;
+      } },
+    v2: { desc: 'Refatorada: renomeou o estado para total e trocou o HTML. Para quem usa, nada mudou.',
+      mount(el) {
+        const inst = { state: { total: 0 } };
+        const draw = () => {
+          const t = inst.state.total;
+          el.innerHTML = `<div class="cmp"><output class="qty">${t} sacas vendidas</output><button type="button" data-action="add"${t >= LIMIT ? ' disabled' : ''}>Registrar venda (+10)</button></div>`;
+          el.querySelector('[data-action=add]').onclick = () => { inst.state = { total: t + 10 }; draw(); };
+        };
+        draw(); return inst;
+      } },
+    v3: { desc: 'Com bug: soma no estado, mas esqueceu de atualizar a tela. Clique e veja.',
+      mount(el) {
+        const inst = { state: { count: 0 } };
+        el.innerHTML = `<div class="cmp"><p class="counter-value">0 sacas vendidas</p><button type="button" class="btn-add">Registrar venda (+10)</button></div>`;
+        el.querySelector('.btn-add').onclick = () => { inst.state.count += 10; };
+        return inst;
+      } },
+  };
+
+  const expect = (v) => ({ toBe: (e) => { if (v !== e) throw new Error(`esperado ${e}, recebido ${v}`); } });
+  const screenOf = (el) => ({
+    getByText(re) {
+      const found = [...el.querySelectorAll('*')].find((n) => re.test(n.textContent.trim()) && ![...n.children].some((c) => re.test(c.textContent.trim())));
+      if (!found) throw new Error(`texto ${re} não encontrado`);
+      return found;
+    },
+    getByRole(role, name) {
+      const found = [...el.querySelectorAll('button, [role=button]')].find((b) => name.test(b.textContent));
+      if (!found) throw new Error(`nenhum ${role} com nome ${name}`);
+      return found;
+    },
+  });
+  const IMPL_TESTS = [
+    { name: 'state.count começa em 0', fn: (inst) => expect(inst.state.count).toBe(0) },
+    { name: 'clicar em .btn-add soma 10 em state.count', fn: (inst, el) => {
+      const b = el.querySelector('.btn-add'); if (!b) throw new Error('.btn-add não existe');
+      b.click(); expect(inst.state.count).toBe(10); } },
+    { name: 'renderiza um elemento .counter-value', fn: (inst, el) => { if (!el.querySelector('.counter-value')) throw new Error('.counter-value não existe'); } },
+  ];
+  const BEH_TESTS = [
+    { name: 'mostra 0 sacas no início', fn: (inst, el) => screenOf(el).getByText(/^0 sacas/) },
+    { name: 'mostra 10 sacas depois de registrar uma venda', fn: (inst, el) => {
+      const s = screenOf(el); s.getByRole('button', /registrar venda/i).click(); s.getByText(/^10 sacas/); } },
+    { name: 'desabilita o botão ao chegar em 30 sacas', fn: (inst, el) => {
+      const s = screenOf(el), b = () => s.getByRole('button', /registrar venda/i);
+      b().click(); b().click(); b().click();
+      if (!b().disabled) throw new Error('o botão continua habilitado'); } },
+  ];
+
+  function runSuite(tests, impl) {
+    return tests.map((t) => {
+      const el = document.createElement('div'); // cada teste monta o componente do zero
+      const inst = impl.mount(el);
+      try { t.fn(inst, el); return { name: t.name, ok: true }; }
+      catch (e) { return { name: t.name, ok: false, err: e.message }; }
+    });
+  }
+  const paint = (id, res) => {
+    $(id).innerHTML = res.map((r) => `<li class="${r.ok ? 'pass' : 'fail'}"><span class="mark">${r.ok ? '✓' : '✗'}</span><span>${esc(r.name)}</span>${r.err ? `<span class="err">${esc(r.err)}</span>` : ''}</li>`).join('');
+  };
+  const score = (res) => {
+    const ok = res.filter((r) => r.ok).length;
+    return `<span class="pill ${ok === res.length ? 'good' : 'bad'}">${ok}/${res.length} passaram</span>`;
+  };
+  const ver = () => $('input[name=ver]:checked').value;
+  const VERDICT = {
+    v1: '<div class="banner good"><b>Tudo verde, como esperado.</b>Agora troque para a v2.</div>',
+    v2: '<div class="banner bad"><b>Falso alarme.</b>Nada quebrou para quem usa, mas os testes de implementação ficaram vermelhos. Alguém vai perder tempo consertando teste.</div>',
+    v3: '<div class="banner bad"><b>Bug escondido.</b>Os testes de implementação passaram com a tela quebrada. Só os testes de comportamento pegaram o bug.</div>',
+  };
+
+  function mountLive() {
+    $('#ver-desc').textContent = IMPLS[ver()].desc;
+    IMPLS[ver()].mount($('#live'));
+    $('#impl-results').innerHTML = $('#beh-results').innerHTML = '';
+    $('#impl-score').innerHTML = $('#beh-score').innerHTML = '';
+    $('#test-verdict').innerHTML = '';
+  }
+  function run() {
+    const impl = IMPLS[ver()];
+    const a = runSuite(IMPL_TESTS, impl), b = runSuite(BEH_TESTS, impl);
+    paint('#impl-results', a); paint('#beh-results', b);
+    $('#impl-score').innerHTML = score(a); $('#beh-score').innerHTML = score(b);
+    $('#test-verdict').innerHTML = VERDICT[ver()];
+  }
+  $$('input[name=ver]').forEach((r) => r.addEventListener('change', () => { mountLive(); run(); }));
+  $('#run-tests').addEventListener('click', run);
+  mountLive(); run();
+})();
+
+/* Decisão */
+Lab.decision($('#decidir'), {
+  title: 'Que teste escrevo para isso?',
+  intro: 'Pense na próxima coisa que você vai entregar e no que precisa continuar funcionando depois.',
+  questions: [
+    { id: 'o_que', text: 'O que você quer garantir?',
+      options: [{ v: 'calc', label: 'Uma regra de cálculo ou transformação' }, { v: 'comp', label: 'Um componente com interação' }, { v: 'fluxo', label: 'Um fluxo inteiro (login, contrato, pagamento)' }, { v: 'visual', label: 'A aparência da tela' }] },
+    { id: 'risco', text: 'Esse fluxo já quebrou em produção ou passa por várias telas e sistemas?', when: (a) => a.o_que === 'fluxo',
+      options: [{ v: 'sim', label: 'Sim' }, { v: 'nao', label: 'Não' }] },
+    { id: 'rede', text: 'O componente busca dados da API?', when: (a) => a.o_que === 'comp',
+      options: [{ v: 'sim', label: 'Sim' }, { v: 'nao', label: 'Não' }] },
+  ],
+  decide(a) {
+    if (a.o_que === 'calc') return { title: 'Teste unitário com tabela de casos', body: '<p>Funções puras são as mais baratas de testar. Liste os casos de borda: zero, negativo, vazio, arredondamento de centavos, virada de safra.</p>', code: "it.each([\n  [1000, 128.4, 128400],\n  [0, 128.4, 0],\n])('%i sc a R$ %d = %d', (sc, preco, total) => {\n  expect(totalContrato(sc, preco)).toBe(total)\n})" };
+    if (a.o_que === 'comp') return { title: 'Teste de integração com Testing Library', body: '<p>Renderize o componente, interaja como a pessoa faria e confira o que aparece na tela. Busque por <code>getByRole</code> e <code>getByLabelText</code>.</p>' + (a.rede === 'sim' ? '<p>Simule a API com MSW em vez de mockar o fetch ou o hook. Assim você também testa carregando, erro e vazio.</p>' : ''),
+      code: a.rede === 'sim' ? "server.use(http.get('/api/contratos', () => HttpResponse.json([])))\nrender(<Contratos />)\nexpect(await screen.findByText(/nenhum contrato/i)).toBeInTheDocument()" : null };
+    if (a.o_que === 'fluxo') return a.risco === 'sim'
+      ? { title: 'Teste end-to-end com Playwright', body: '<p>Poucos e estáveis: só os fluxos que dão dinheiro ou travam a pessoa. Rode no CI a cada PR, use dados de teste próprios e seletores por papel, nunca por classe CSS.</p>', code: "await page.getByRole('button', { name: 'Novo contrato' }).click()\nawait page.getByLabel('Sacas').fill('1000')\nawait expect(page.getByText('Contrato criado')).toBeVisible()" }
+      : { tone: 'warn', title: 'Integração primeiro e um e2e de fumaça', body: '<p>Cubra as telas com testes de integração, que são mais rápidos e menos instáveis. Um único e2e que percorre o caminho feliz já mostra que as peças se conectam.</p>' };
+    return { tone: 'warn', title: 'Revisão visual, não asserção', body: '<p>Testar cor e posição com <code>expect</code> gera testes frágeis. Use Storybook com comparação de screenshots (Chromatic ou Playwright) e deixe uma pessoa aprovar as mudanças visuais.</p>' };
+  },
+});
+</script>
+</body>
+</html>

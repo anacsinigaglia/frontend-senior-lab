@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Semântica e acessibilidade · Lab Frontend Sênior</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="lab.css">
+<style>
+  .twin { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 780px) { .twin { grid-template-columns: minmax(0, 1fr); } }
+  .twin-col { display: grid; gap: 10px; align-content: start; min-width: 0; }
+  .act { font: 600 15px var(--f-body); padding: 11px 16px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); border: 0; cursor: pointer; display: inline-block; user-select: none; justify-self: start; }
+  .counter { display: flex; gap: 14px; font: 13px var(--f-mono); color: var(--muted); }
+  .counter b { color: var(--ink); font-size: 15px; }
+
+  /* Os dois cartões têm a mesma aparência; só o HTML muda */
+  .order { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 8px; }
+  .order .crumbs { display: flex; gap: 10px; font-size: 13px; }
+  .order .crumbs a, .order .crumbs .lnk { color: var(--accent); text-decoration: underline; cursor: pointer; }
+  .order .ttl, .order h3 { font: 650 18px/1.2 var(--f-display); margin: 0; }
+  .order img { width: 100%; height: 70px; object-fit: cover; border-radius: 6px; display: block; }
+  .order p, .order .txt { margin: 0; font-size: 14px; }
+  .order .act { padding: 8px 12px; font-size: 14px; }
+  .sr-out { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font: 12.5px/1.45 var(--f-mono); }
+  .sr-out li { padding: 5px 9px; border-radius: 6px; background: var(--surface); border: 1px solid var(--line); }
+  .sr-out li.miss { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+  .sr-out li.role { background: var(--good-soft); color: var(--good); border-color: transparent; }
+  .sr-sum { font: 12.5px var(--f-mono); color: var(--muted); margin: 0; }
+
+  .swatch { border-radius: 10px; padding: 18px; display: grid; gap: 6px; border: 1px solid var(--line); }
+  .swatch .big { font: 700 24px/1.1 var(--f-display); }
+  .color-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  input[type="color"] { width: 100%; height: 40px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); padding: 3px; }
+</style>
+</head>
+<body data-module="semantica">
+<header class="topbar"><div class="wrap"><a class="brand" href="index.html"><span class="brand-mark">FS</span>Lab Frontend Sênior</a><nav class="modnav" id="modnav" aria-label="Módulos"></nav></div></header>
+
+<div class="wrap">
+  <header class="page-head">
+    <p class="eyebrow">Módulo · HTML semântico e acessibilidade</p>
+    <h1>A tag certa já resolve metade do trabalho</h1>
+    <p class="lede">Um <code>&lt;button&gt;</code> já vem com foco, teclado e anúncio para leitor de tela. Uma <code>&lt;div&gt;</code> não vem com nada disso. Nos experimentos abaixo, você testa com o teclado, ouve o que um leitor de tela anunciaria e mede o contraste.</p>
+    <ul class="senior">
+      <li><b>Escolhe a tag pelo comportamento</b>Link navega, botão executa uma ação. Aparência é papel do CSS.</li>
+      <li><b>Testa sem mouse</b>Percorre a tela só com Tab, Enter e Esc antes de abrir o PR.</li>
+      <li><b>Usa ARIA por último</b>ARIA corrige o que o HTML não expressa. Não substitui a tag certa.</li>
+    </ul>
+  </header>
+
+  <main>
+    <section class="lab" id="botao">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · Teclado</p>
+        <h2>Div com cara de botão contra botão de verdade</h2>
+        <p>Clique nos dois. Depois clique no campo abaixo, use <kbd>Tab</kbd> para chegar até eles e aperte <kbd>Enter</kbd> ou <kbd>Espaço</kbd>. Veja quais ações são registradas.</p>
+      </div>
+      <input type="text" id="kb-start" placeholder="Comece aqui e aperte Tab" aria-label="Ponto de partida para testar com Tab" style="max-width:320px">
+      <div class="twin">
+        <div class="twin-col output">
+          <p class="code-label">&lt;div onClick&gt;</p>
+          <div class="act" id="divbtn">Salvar contrato</div>
+          <div class="counter"><span>mouse <b id="div-mouse">0</b></span><span>teclado <b id="div-kb">0</b></span></div>
+          <label class="row" style="font-size:14px"><input type="checkbox" id="fix-div"> Consertar a div na mão</label>
+        </div>
+        <div class="twin-col output">
+          <p class="code-label">&lt;button&gt;</p>
+          <button type="button" class="act" id="realbtn">Salvar contrato</button>
+          <div class="counter"><span>mouse <b id="btn-mouse">0</b></span><span>teclado <b id="btn-kb">0</b></span></div>
+          <p class="hint">Funciona com teclado sem nenhuma linha extra.</p>
+        </div>
+      </div>
+      <div class="code-pair">
+        <div><p class="code-label">O conserto da div: 4 coisas para lembrar</p>
+<pre class="code">&lt;div
+  role="button"                <span class="c">// leitor de tela anuncia "botão"</span>
+  tabIndex={0}                 <span class="c">// entra na ordem do Tab</span>
+  onClick={salvar}
+  onKeyDown={e =&gt; {            <span class="c">// Enter e Espaço ativam</span>
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      salvar()
+    }
+  }}
+&gt;Salvar contrato&lt;/div&gt;
+<span class="c">// e ainda faltam: estado disabled, foco visível, submit em form</span></pre></div>
+        <div><p class="code-label">O botão: já vem pronto</p>
+<pre class="code">&lt;button type="button" onClick={salvar}&gt;
+  Salvar contrato
+&lt;/button&gt;</pre></div>
+      </div>
+      <p class="takeaway"><b>Leitura de sênior.</b> Se você está escrevendo <code>role="button"</code> e <code>tabIndex</code>, pare e troque por <code>&lt;button&gt;</code>. O mesmo vale para link: se a ação muda a URL, use <code>&lt;a href&gt;</code>. Assim a pessoa consegue abrir em nova aba e o botão voltar funciona.</p>
+    </section>
+
+    <section class="lab" id="leitor">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · Leitor de tela</p>
+        <h2>Mesmo visual, outra experiência</h2>
+        <p>Os dois cartões são idênticos na tela. Clique em "Ouvir" para ver, em ordem, o que um leitor de tela anunciaria em cada um, e quantos atalhos de navegação a pessoa teria.</p>
+      </div>
+      <div class="twin">
+        <div class="twin-col">
+          <p class="code-label">Só divs e spans</p>
+          <div class="order" id="soup">
+            <div class="crumbs"><span class="lnk">Início</span><span class="lnk">Pedidos</span></div>
+            <div class="ttl">Pedido #1042</div>
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 70'%3E%3Crect width='300' height='70' fill='%23cfe3df'/%3E%3Crect x='40' y='22' width='120' height='30' rx='3' fill='%230e6e66'/%3E%3Crect x='160' y='30' width='40' height='22' rx='3' fill='%23175650'/%3E%3Ccircle cx='70' cy='56' r='8' fill='%2316212b'/%3E%3Ccircle cx='180' cy='56' r='8' fill='%2316212b'/%3E%3Crect y='62' width='300' height='8' fill='%2393a4ad'/%3E%3C/svg%3E">
+            <div class="txt">Status: em trânsito, 3 dias para a entrega</div>
+            <div class="act">Cancelar</div>
+          </div>
+          <button type="button" class="btn" data-listen="soup">Ouvir este cartão</button>
+          <p class="sr-sum" id="soup-sum"></p>
+          <ol class="sr-out" id="soup-out"></ol>
+        </div>
+        <div class="twin-col">
+          <p class="code-label">HTML semântico</p>
+          <article class="order" id="semantic" aria-labelledby="ped-1042">
+            <nav class="crumbs" aria-label="Trilha"><a href="#leitor">Início</a><a href="#leitor">Pedidos</a></nav>
+            <h3 id="ped-1042">Pedido #1042</h3>
+            <img alt="Caminhão com a carga de soja na estrada" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 70'%3E%3Crect width='300' height='70' fill='%23cfe3df'/%3E%3Crect x='40' y='22' width='120' height='30' rx='3' fill='%230e6e66'/%3E%3Crect x='160' y='30' width='40' height='22' rx='3' fill='%23175650'/%3E%3Ccircle cx='70' cy='56' r='8' fill='%2316212b'/%3E%3Ccircle cx='180' cy='56' r='8' fill='%2316212b'/%3E%3Crect y='62' width='300' height='8' fill='%2393a4ad'/%3E%3C/svg%3E">
+            <p>Status: em trânsito, 3 dias para a entrega</p>
+            <button type="button" class="act">Cancelar pedido #1042</button>
+          </article>
+          <button type="button" class="btn" data-listen="semantic">Ouvir este cartão</button>
+          <p class="sr-sum" id="semantic-sum"></p>
+          <ol class="sr-out" id="semantic-out"></ol>
+        </div>
+      </div>
+      <p class="takeaway"><b>Leitura de sênior.</b> Quem usa leitor de tela costuma pular de título em título (tecla H) ou de região em região. Sem <code>&lt;h3&gt;</code> e <code>&lt;nav&gt;</code>, essa pessoa precisa ouvir a página inteira linha a linha. Repare também em "Cancelar pedido #1042": numa lista, dez botões chamados só "Cancelar" não dizem qual pedido cada um cancela.</p>
+    </section>
+
+    <section class="lab" id="contraste">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · Contraste</p>
+        <h2>Esse texto dá para ler no sol?</h2>
+        <p>A WCAG pede contraste mínimo de 4,5:1 para texto normal e 3:1 para texto grande. Teste as cores do seu design system ou os exemplos.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="color-row">
+            <div class="field"><label for="c-fg">Texto</label><input type="color" id="c-fg" value="#9ca3af"></div>
+            <div class="field"><label for="c-bg">Fundo</label><input type="color" id="c-bg" value="#ffffff"></div>
+          </div>
+          <div class="field">
+            <span class="field-label">Exemplos</span>
+            <div class="row">
+              <button type="button" class="btn small" data-c="#9ca3af,#ffffff">Cinza de placeholder</button>
+              <button type="button" class="btn small" data-c="#22c55e,#ffffff">Verde de sucesso</button>
+              <button type="button" class="btn small" data-c="#ffffff,#166534">Branco no verde escuro</button>
+              <button type="button" class="btn small" data-c="#374151,#f3f4f6">Texto padrão</button>
+            </div>
+          </div>
+        </div>
+        <div class="output">
+          <div class="swatch" id="c-preview">
+            <span class="big">142,5 sc vendidas</span>
+            <span>Preço médio de R$ 128,40 por saca na última semana.</span>
+          </div>
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="c-ratio">–</span><span class="stat-l">contraste</span></div>
+          </div>
+          <div class="checks" id="c-checks"></div>
+        </div>
+      </div>
+      <details class="src">
+        <summary>Ver o cálculo</summary>
+<pre class="code"><span class="c">// Luminância relativa (WCAG 2.x)</span>
+const canal = v =&gt; (v /= 255) &lt;= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+const lum = ([r, g, b]) =&gt; 0.2126 * canal(r) + 0.7152 * canal(g) + 0.0722 * canal(b)
+
+const contraste = (a, b) =&gt; {
+  const [claro, escuro] = [lum(a), lum(b)].sort((x, y) =&gt; y - x)
+  return (claro + 0.05) / (escuro + 0.05)     <span class="c">// de 1:1 até 21:1</span>
+}</pre>
+      </details>
+      <p class="takeaway"><b>Leitura de sênior.</b> Cor nunca deve ser o único sinal. Um status "vencido" em vermelho também precisa de texto ou ícone, porque cerca de 8% dos homens têm alguma forma de daltonismo.</p>
+    </section>
+
+    <section id="decidir"></section>
+  </main>
+
+  <nav class="pager" id="pager" aria-label="Navegação entre módulos"></nav>
+</div>
+
+<script src="lab.js"></script>
+<script>
+const { $, $$, esc } = Lab;
+
+/* Teclado */
+(() => {
+  const div = $('#divbtn'), btn = $('#realbtn');
+  const n = { 'div-mouse': 0, 'div-kb': 0, 'btn-mouse': 0, 'btn-kb': 0 };
+  const bump = (k) => { n[k]++; $('#' + k).textContent = n[k]; };
+  div.addEventListener('click', () => bump('div-mouse'));
+  // detail === 0 quando o click foi gerado pelo teclado
+  btn.addEventListener('click', (e) => bump(e.detail === 0 ? 'btn-kb' : 'btn-mouse'));
+  const onKey = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); bump('div-kb'); }
+  };
+  $('#fix-div').addEventListener('change', (e) => {
+    if (e.target.checked) { div.setAttribute('role', 'button'); div.tabIndex = 0; div.addEventListener('keydown', onKey); }
+    else { div.removeAttribute('role'); div.removeAttribute('tabindex'); div.removeEventListener('keydown', onKey); }
+  });
+})();
+
+/* Leitor de tela simulado: uma versão simplificada da árvore de acessibilidade */
+(() => {
+  function announce(root) {
+    const lines = [];
+    const tally = { títulos: 0, regiões: 0, links: 0, botões: 0 };
+    const name = (el) => el.textContent.replace(/\s+/g, ' ').trim();
+    const LANDMARKS = { NAV: 'navegação', MAIN: 'principal', ASIDE: 'complementar', HEADER: 'cabeçalho', FOOTER: 'rodapé' };
+    function walk(el) {
+      for (const node of el.childNodes) {
+        if (node.nodeType === 3) {
+          const t = node.textContent.replace(/\s+/g, ' ').trim();
+          if (t) lines.push({ t: `texto: "${t}"` });
+          continue;
+        }
+        if (node.nodeType !== 1) continue;
+        const tag = node.tagName, role = node.getAttribute('role');
+        if (/^H[1-6]$/.test(tag)) { tally.títulos++; lines.push({ t: `título nível ${tag[1]}: "${name(node)}"`, c: 'role' }); continue; }
+        if (tag === 'A' && node.hasAttribute('href')) { tally.links++; lines.push({ t: `link: "${name(node)}"`, c: 'role' }); continue; }
+        if (tag === 'BUTTON' || role === 'button') { tally.botões++; lines.push({ t: `botão: "${name(node)}"`, c: 'role' }); continue; }
+        if (tag === 'IMG') {
+          const alt = node.getAttribute('alt');
+          if (alt === null) lines.push({ t: 'imagem sem descrição: o leitor lê o nome do arquivo ou "imagem"', c: 'miss' });
+          else if (alt) lines.push({ t: `imagem: "${alt}"`, c: 'role' });
+          continue;
+        }
+        if (LANDMARKS[tag]) {
+          tally.regiões++;
+          const label = node.getAttribute('aria-label');
+          lines.push({ t: `região de ${LANDMARKS[tag]}${label ? ` "${label}"` : ''}`, c: 'role' });
+        }
+        if (tag === 'ARTICLE') {
+          const lb = node.getAttribute('aria-labelledby');
+          lines.push({ t: `artigo${lb ? `: "${name(document.getElementById(lb))}"` : ''}`, c: 'role' });
+        }
+        if (tag === 'P') { lines.push({ t: `parágrafo: "${name(node)}"` }); continue; }
+        walk(node);
+      }
+    }
+    walk(root);
+    return { lines, tally };
+  }
+
+  $$('[data-listen]').forEach((b) => b.addEventListener('click', () => {
+    const id = b.dataset.listen;
+    const card = document.getElementById(id);
+    const wrapper = document.createElement('div');
+    wrapper.appendChild(card.cloneNode(true));
+    const { lines, tally } = announce(wrapper);
+    if (id === 'soup') lines.forEach((l) => { if (/Início|Pedidos|Cancelar|Pedido #/.test(l.t) && l.t.startsWith('texto')) l.c = 'miss'; });
+    const out = $('#' + id + '-out');
+    out.innerHTML = lines.map((l) => `<li class="${l.c || ''}">${esc(l.t)}</li>`).join('');
+    $('#' + id + '-sum').textContent = 'Atalhos de navegação: ' + Object.entries(tally).map(([k, v]) => `${v} ${k}`).join(' · ');
+  }));
+})();
+
+/* Contraste */
+(() => {
+  const fg = $('#c-fg'), bg = $('#c-bg');
+  const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const ch = (v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+  const lum = ([r, g, b]) => 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+  function update() {
+    const [hi, lo] = [lum(rgb(fg.value)), lum(rgb(bg.value))].sort((a, b) => b - a);
+    const ratio = (hi + 0.05) / (lo + 0.05);
+    const p = $('#c-preview');
+    p.style.color = fg.value; p.style.background = bg.value;
+    $('#c-ratio').textContent = ratio.toFixed(2).replace('.', ',') + ':1';
+    const rows = [
+      ['Texto normal, nível AA (4,5:1)', ratio >= 4.5],
+      ['Texto grande ou ícone, nível AA (3:1)', ratio >= 3],
+      ['Texto normal, nível AAA (7:1)', ratio >= 7],
+    ];
+    $('#c-checks').innerHTML = rows.map(([k, ok]) =>
+      `<div class="check-row"><span>${k}</span><span class="pill ${ok ? 'good' : 'bad'}">${ok ? 'Passa' : 'Reprova'}</span></div>`).join('');
+  }
+  fg.addEventListener('input', update); bg.addEventListener('input', update);
+  $$('[data-c]').forEach((b) => b.addEventListener('click', () => { [fg.value, bg.value] = b.dataset.c.split(','); update(); }));
+  update();
+})();
+
+/* Decisão */
+Lab.decision($('#decidir'), {
+  title: 'Qual elemento eu uso?',
+  intro: 'Pense no elemento que você está prestes a criar e responda pelo que ele faz, não pela aparência dele.',
+  questions: [
+    { id: 'faz', text: 'O que acontece quando a pessoa interage com ele?',
+      options: [{ v: 'nav', label: 'Vai para outra página ou URL' }, { v: 'acao', label: 'Executa algo na mesma tela' }, { v: 'form', label: 'Envia um formulário' }, { v: 'nada', label: 'Nada, é conteúdo' }] },
+    { id: 'toggle', text: 'A ação liga e desliga algo?', hint: 'Abrir um menu, marcar como favorito, expandir uma linha.', when: (a) => a.faz === 'acao',
+      options: [{ v: 'sim', label: 'Sim' }, { v: 'nao', label: 'Não' }] },
+    { id: 'papel', text: 'Que papel esse conteúdo tem?', when: (a) => a.faz === 'nada',
+      options: [{ v: 'titulo', label: 'Título de seção' }, { v: 'lista', label: 'Lista de itens' }, { v: 'tabela', label: 'Dados em linhas e colunas' }, { v: 'bloco', label: 'Bloco independente (card, post)' }, { v: 'texto', label: 'Texto corrido' }] },
+  ],
+  decide(a) {
+    if (a.faz === 'nav') return { title: '<a href>', body: '<p>Navegação é link, mesmo que pareça botão. Assim funcionam abrir em nova aba, copiar endereço e o botão voltar. Em React Router ou Next, use o componente <code>Link</code>, que renderiza um <code>&lt;a&gt;</code>.</p>', code: '<Link href="/contratos/42" className="botao">Ver contrato</Link>' };
+    if (a.faz === 'form') return { title: '<button type="submit"> dentro de <form>', body: '<p>Assim o Enter envia o formulário e o navegador valida <code>required</code>. Cada campo precisa de um <code>&lt;label&gt;</code> ligado pelo <code>htmlFor</code>. Placeholder não substitui label.</p>', code: '<form onSubmit={salvar}>\n  <label htmlFor="sacas">Sacas</label>\n  <input id="sacas" type="number" required />\n  <button type="submit">Salvar</button>\n</form>' };
+    if (a.faz === 'acao') return a.toggle === 'sim'
+      ? { title: '<button> com estado ARIA', body: '<p>Use <code>aria-expanded</code> para o que abre e fecha e <code>aria-pressed</code> para o que liga e desliga. O leitor de tela anuncia "recolhido" ou "expandido".</p>', code: '<button aria-expanded={aberto} aria-controls="filtros" onClick={alternar}>\n  Filtros\n</button>' }
+      : { title: '<button type="button">', body: '<p>Sempre declare <code>type="button"</code>: dentro de um form, o padrão é <code>submit</code> e o clique enviaria o formulário sem querer. Se o botão só tem ícone, dê um nome com <code>aria-label</code>.</p>', code: '<button type="button" aria-label="Excluir contrato 42" onClick={excluir}>\n  <IconeLixeira aria-hidden />\n</button>' };
+    return {
+      titulo: { title: '<h2>, <h3>… na ordem', body: '<p>Os níveis formam um índice da página. Não pule de h2 para h4 por causa do tamanho da fonte: ajuste o tamanho no CSS e mantenha a hierarquia.</p>' },
+      lista: { title: '<ul> ou <ol>', body: '<p>O leitor anuncia "lista, 12 itens", e a pessoa sabe o tamanho antes de começar. Use <code>&lt;ol&gt;</code> quando a ordem importa (passos, ranking).</p>' },
+      tabela: { title: '<table> com <th scope>', body: '<p>Tabela de dados é tabela, não um grid de divs. Com <code>&lt;th scope="col"&gt;</code>, cada célula é lida junto com o nome da coluna.</p>', code: '<table>\n  <caption>Vendas por safra</caption>\n  <thead><tr><th scope="col">Safra</th><th scope="col">Sacas</th></tr></thead>\n  ...\n</table>' },
+      bloco: { title: '<article> ou <section> com título', body: '<p><code>&lt;article&gt;</code> serve para algo que faz sentido sozinho (um pedido, um post). <code>&lt;section&gt;</code> agrupa uma parte da página e deve ter um título.</p>' },
+      texto: { title: '<p>', body: '<p>Texto corrido vai em parágrafo. Use <code>&lt;strong&gt;</code> para importância e <code>&lt;em&gt;</code> para ênfase, não <code>&lt;b&gt;</code> e <code>&lt;i&gt;</code> por estética.</p>' },
+    }[a.papel];
+  },
+});
+</script>
+</body>
+</html>
