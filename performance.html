@@ -13,6 +13,16 @@
   .vrow { height: 32px; line-height: 32px; padding: 0 12px; border-bottom: 1px solid var(--line); font: 13px/32px var(--f-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #thr-area { display: flex; flex-wrap: wrap; gap: 2px; max-height: 120px; overflow: hidden; }
   .tbox { height: 8px; background: var(--accent); opacity: 0.55; border-radius: 2px; }
+  .tradeoff { display: grid; gap: 14px; }
+  .tradeoff-q { margin: 0; max-width: 72ch; color: var(--muted); }
+  .tradeoff-q b { color: var(--ink); }
+  .tradeoff-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .tcard { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+  .tcard h3 { font-size: 16px; }
+  .tcard p { margin: 0; font-size: 14px; color: var(--muted); }
+  .tcard ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
+  .tcard li b { font-weight: 600; }
+  .tcard.combo { border-color: var(--accent); }
 </style>
 </head>
 <body data-module="performance">
@@ -124,7 +134,53 @@ for (let i = inicio; i &lt; fim; i++) desenhaLinha(i, i * ALTURA)
 const v = useVirtualizer({ count: linhas.length, getScrollElement: () =&gt; ref.current, estimateSize: () =&gt; 32 })
 v.getVirtualItems().map(item =&gt; &lt;Linha key={item.key} style={{ transform: `translateY(${item.start}px)` }} /&gt;)</pre>
       </details>
-      <p class="takeaway"><b>Leitura de sênior.</b> Antes de virtualizar, pergunte se alguém precisa ver 50 mil linhas. Paginação ou filtro no servidor costumam ser a resposta melhor. Virtualização tem custos: o Ctrl+F do navegador não encontra o que está fora da tela e alturas variáveis complicam o cálculo.</p>
+      <div class="tradeoff">
+        <h3>Virtualizar, paginar ou filtrar no servidor?</h3>
+        <p class="tradeoff-q">As três não competem: resolvem gargalos diferentes. Virtualizar reduz o custo de <b>desenhar</b> (os dados já estão no navegador, o DOM é que pesa). Paginar ou filtrar no servidor reduz o custo de <b>buscar e trafegar</b>. Pergunte: está lento porque o navegador desenha demais, ou porque chega dado demais?</p>
+        <div class="tradeoff-grid">
+          <div class="tcard">
+            <span class="pill good" style="justify-self:start">Virtualizar</span>
+            <h3>Quando é melhor</h3>
+            <ul>
+              <li><b>O volume é limitado e cabe no cliente:</b> milhares a dezenas de milhares de linhas leves, poucos MB. Ex.: os clientes de um assessor, um extrato do ano.</li>
+              <li><b>A pessoa percorre a lista</b> em vez de procurar um item: rola, compara linhas vizinhas, navega pelo teclado.</li>
+              <li><b>Ordenar e filtrar precisam ser instantâneos:</b> com tudo em memória, nenhum clique vira requisição.</li>
+              <li><b>Os dados chegam em fluxo:</b> logs, feed, cotações, chat.</li>
+              <li><b>Precisa funcionar offline</b> ou com rede ruim depois de carregado.</li>
+              <li><b>As linhas têm altura previsível.</b></li>
+            </ul>
+          </div>
+          <div class="tcard">
+            <span class="pill neutral" style="justify-self:start">Paginar / filtrar no servidor</span>
+            <h3>Quando é melhor</h3>
+            <ul>
+              <li><b>O volume é grande ou não tem limite:</b> virtualizar não salva um JSON de 50 MB.</li>
+              <li><b>A pessoa procura um item específico:</b> busca e filtro levam direto a ele.</li>
+              <li><b>Permissão e segurança:</b> o que ela não pode ver nem deve chegar ao navegador.</li>
+              <li><b>Totais e agregações</b> precisam bater com o banco, mesmo com dados mudando.</li>
+              <li><b>URL compartilhável ou SEO:</b> <code>?page=3&amp;status=ativo</code>.</li>
+            </ul>
+          </div>
+          <div class="tcard">
+            <span class="pill warn" style="justify-self:start">Custos da virtualização</span>
+            <h3>O que você paga</h3>
+            <ul>
+              <li>O <kbd>Ctrl</kbd>+<kbd>F</kbd> do navegador não acha linhas fora da tela.</li>
+              <li>Leitor de tela não sabe o tamanho da lista sem <code>aria-rowcount</code> e <code>aria-rowindex</code>.</li>
+              <li>Altura variável exige medir cada linha e pode causar “pulos” no scroll.</li>
+              <li>Impressão, restaurar a posição do scroll e cabeçalho fixo com largura de coluna dão trabalho extra.</li>
+              <li>Abaixo de algumas centenas de linhas simples, não precisa de nenhuma das técnicas.</li>
+            </ul>
+          </div>
+          <div class="tcard combo">
+            <span class="pill good" style="justify-self:start">O caso comum</span>
+            <h3>Combinar as duas</h3>
+            <p>Lista grande que a pessoa rola: scroll infinito com paginação por cursor no servidor e virtualização no cliente. O servidor entrega em blocos, o cliente desenha só o visível, e o filtro fica no servidor para não buscar o que vai ser descartado.</p>
+            <p>Em React: <code>useInfiniteQuery</code> (TanStack Query) + <code>useVirtualizer</code> (TanStack Virtual).</p>
+          </div>
+        </div>
+      </div>
+      <p class="takeaway"><b>Leitura de sênior.</b> Antes de virtualizar, pergunte se alguém precisa ver 50 mil linhas. Virtualize quando o problema é o DOM e os dados cabem no cliente. Pagine ou filtre no servidor quando o problema é o volume ou a busca. Quando são os dois, use os dois.</p>
     </section>
 
     <section class="lab" id="thrashing">
