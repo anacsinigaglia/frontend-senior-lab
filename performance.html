@@ -23,6 +23,15 @@
   .tcard ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
   .tcard li b { font-weight: 600; }
   .tcard.combo { border-color: var(--accent); }
+  .stat .pill { justify-self: start; }
+  .cwv-group { display: grid; gap: 10px; padding-top: 12px; border-top: 1px dashed var(--line); }
+  .cwv-group:first-child { padding-top: 0; border-top: 0; }
+  .cwv-group h3 { font-size: 16px; }
+  #cwv-slot:empty { display: none; }
+  #cwv-slot.reserved { min-height: 180px; border-radius: 8px; background: var(--paper); display: block; }
+  .cwv-banner { height: 180px; box-sizing: border-box; padding: 12px 14px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); font-size: 14px; display: grid; align-content: center; gap: 2px; }
+  .cwv-banner b { font-family: var(--f-display); font-size: 15px; }
+  #cwv-status { font: 600 13px var(--f-mono); color: var(--muted); }
 </style>
 </head>
 <body data-module="performance">
@@ -32,7 +41,7 @@
   <header class="page-head">
     <p class="eyebrow">Módulo · Performance</p>
     <h1>Meça antes de otimizar</h1>
-    <p class="lede">Otimizar sem medir só deixa o código mais complexo. Aqui você provoca três problemas clássicos, vê o número mudar e entende qual ferramenta resolve cada um.</p>
+    <p class="lede">Otimizar sem medir só deixa o código mais complexo. Aqui você mede as notas que o Google dá para a página, provoca problemas clássicos, vê o número mudar e entende qual ferramenta resolve cada um.</p>
     <ul class="senior">
       <li><b>Começa pelo sintoma</b>Pergunta o que está lento e para quem antes de escrever um useMemo.</li>
       <li><b>Sabe onde o tempo vai</b>Distingue rede, JavaScript, layout e pintura no painel Performance.</li>
@@ -41,6 +50,108 @@
   </header>
 
   <main>
+    <section class="lab" id="vitals">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · Core Web Vitals</p>
+        <h2>As três notas que o Google dá para a sua página</h2>
+        <p>Core Web Vitals são três métricas de experiência real: quanto o conteúdo principal demora a aparecer, quanto a tela demora a responder e quanto o layout pula. Os números abaixo são medidos ao vivo nesta página, com a mesma API que a biblioteca <code>web-vitals</code> usa. Provoque uma interação lenta e um layout que pula, e veja a nota mudar.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="grid">
+          <thead><tr><th>Métrica</th><th>O que mede</th><th>Bom</th><th>Ruim</th><th>O que costuma piorar</th></tr></thead>
+          <tbody>
+            <tr><td><b>LCP</b><br><small>Largest Contentful Paint</small></td><td>Quando o maior elemento visível (imagem, título, bloco de texto) termina de aparecer</td><td><span class="pill good">≤ 2,5 s</span></td><td><span class="pill bad">&gt; 4 s</span></td><td>Servidor lento, imagem principal pesada ou com <code>loading="lazy"</code>, CSS e JS bloqueando, conteúdo que só aparece depois do fetch no cliente</td></tr>
+            <tr><td><b>INP</b><br><small>Interaction to Next Paint</small></td><td>Da interação (clique, toque, tecla) até a tela mostrar a resposta. Vale a pior interação da visita, quase sempre</td><td><span class="pill good">≤ 200 ms</span></td><td><span class="pill bad">&gt; 500 ms</span></td><td>Handler que faz trabalho pesado antes de pintar, re-render de árvore grande, tarefas longas de terceiros (analytics, chat)</td></tr>
+            <tr><td><b>CLS</b><br><small>Cumulative Layout Shift</small></td><td>Quanto o conteúdo visível muda de lugar sem a pessoa ter pedido</td><td><span class="pill good">≤ 0,1</span></td><td><span class="pill bad">&gt; 0,25</span></td><td>Imagem sem <code>width</code>/<code>height</code>, aviso ou anúncio inserido acima do conteúdo, fonte que troca de tamanho, skeleton com altura diferente do conteúdo</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="cwv-slot" aria-live="polite"></div>
+      <div class="playground">
+        <div class="controls">
+          <div class="cwv-group">
+            <h3>INP: um clique que trava</h3>
+            <div class="field">
+              <label for="inp-ms">Trabalho no clique <output id="inp-ms-out" for="inp-ms">300 ms</output></label>
+              <input id="inp-ms" type="range" min="0" max="800" step="50" value="300">
+            </div>
+            <div class="field">
+              <span class="field-label">Handler</span>
+              <div class="seg" role="radiogroup" aria-label="Como o handler faz o trabalho">
+                <label><input type="radio" name="inp-mode" value="block" checked><span>Trabalha antes de pintar</span></label>
+                <label><input type="radio" name="inp-mode" value="yield"><span>Pinta antes, trabalha depois</span></label>
+              </div>
+            </div>
+            <button type="button" class="btn primary" id="inp-run" style="justify-self:start">Salvar contrato</button>
+            <p class="hint" id="inp-feedback" aria-live="polite">O mesmo trabalho nos dois modos. Muda só quando a tela recebe a resposta.</p>
+          </div>
+          <div class="cwv-group">
+            <h3>CLS: um aviso que chega depois</h3>
+            <div class="field">
+              <span class="field-label">Espaço para o aviso</span>
+              <div class="seg" role="radiogroup" aria-label="Espaço para o aviso">
+                <label><input type="radio" name="cls-mode" value="none" checked><span>Sem espaço reservado</span></label>
+                <label><input type="radio" name="cls-mode" value="reserved"><span>Com espaço reservado</span></label>
+              </div>
+            </div>
+            <div class="row">
+              <button type="button" class="btn primary" id="cls-run">Simular resposta da API</button>
+              <button type="button" class="btn ghost" id="cls-reset">Limpar</button>
+            </div>
+            <p class="hint" id="cls-feedback" aria-live="polite" style="min-height:3em">Escolha o modo e simule a resposta.</p>
+            <p class="hint">O aviso chega 1 s depois do clique, acima do experimento, e empurra tudo o que está na tela. Deslocamentos até 500 ms após uma interação não contam, porque a pessoa esperava uma mudança. Se o CLS já começar acima de zero, é um caso real desta página: a fonte do Google chega depois do texto e muda o tamanho das linhas.</p>
+          </div>
+        </div>
+        <div class="output">
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="cwv-lcp">–</span><span class="stat-l">LCP desta página</span><span class="pill neutral" id="cwv-lcp-r">medindo</span></div>
+            <div class="stat"><span class="stat-n" id="cwv-inp">–</span><span class="stat-l">INP (pior interação)</span><span class="pill neutral" id="cwv-inp-r">interaja</span></div>
+            <div class="stat"><span class="stat-n" id="cwv-cls">0</span><span class="stat-l">CLS acumulado</span><span class="pill neutral" id="cwv-cls-r">medindo</span></div>
+          </div>
+          <p class="hint" id="cwv-detail">Elemento do LCP: medindo…</p>
+          <p id="cwv-status">Última interação: –</p>
+          <p id="cwv-shift" class="hint">Nenhum deslocamento ainda.</p>
+          <p class="hint" id="cwv-support" hidden></p>
+        </div>
+      </div>
+      <details class="src">
+        <summary>Ver o código</summary>
+<pre class="code"><span class="c">// Medir em produção (RUM): a biblioteca web-vitals manda os números de cada visita real</span>
+import { onLCP, onINP, onCLS } from 'web-vitals'
+const enviar = (m) =&gt; navigator.sendBeacon('/analytics', JSON.stringify({ nome: m.name, valor: m.value, nota: m.rating }))
+onLCP(enviar); onINP(enviar); onCLS(enviar)
+
+<span class="c">// O que ela faz por baixo: observa entradas de performance do navegador</span>
+new PerformanceObserver((lista) =&gt; {
+  for (const e of lista.getEntries()) if (e.interactionId) maiorDuracao = Math.max(maiorDuracao, e.duration)
+}).observe({ type: 'event', durationThreshold: 16, buffered: true })</pre>
+        <div class="code-pair" style="margin-top:10px">
+          <div><p class="code-label">INP ruim: trabalha antes de pintar</p>
+<pre class="code">botao.onclick = () =&gt; {
+  recalcularCarteira()               <span class="no">// 300 ms travando a thread</span>
+  status.textContent = 'Salvo'       <span class="no">// só pinta depois</span>
+}</pre></div>
+          <div><p class="code-label">INP bom: responde, cede a thread, trabalha</p>
+<pre class="code">botao.onclick = async () =&gt; {
+  status.textContent = 'Salvando…'   <span class="ok">// resposta visível já</span>
+  await depoisDaPintura()            <span class="ok">// rAF + setTimeout</span>
+  recalcularCarteira()
+  status.textContent = 'Salvo'
+}</pre></div>
+        </div>
+        <div class="code-pair" style="margin-top:10px">
+          <div><p class="code-label">CLS ruim: nada guarda o lugar</p>
+<pre class="code">{aviso &amp;&amp; &lt;Aviso /&gt;}                 <span class="no">// empurra a lista</span>
+&lt;img src="logo.png" /&gt;              <span class="no">// sem dimensões</span></pre></div>
+          <div><p class="code-label">CLS bom: o espaço existe antes do conteúdo</p>
+<pre class="code">&lt;div style={{ minHeight: 96 }}&gt;{aviso &amp;&amp; &lt;Aviso /&gt;}&lt;/div&gt;
+&lt;img src="logo.png" width="120" height="40" /&gt;
+.capa { aspect-ratio: 16 / 9 }</pre></div>
+        </div>
+      </details>
+      <p class="takeaway"><b>Leitura de sênior.</b> A nota que conta é a de campo: o Google usa o percentil 75 das visitas reais do Chrome (CrUX), não o seu notebook. O Lighthouse mede LCP e CLS em laboratório, mas não mede INP, porque não clica em nada: no lugar ele mostra o TBT, que só aproxima. Para INP, use a aba Performance do DevTools (que mostra as três métricas ao vivo enquanto você usa a página) e a <code>web-vitals</code> em produção. O React Profiler não mede nenhuma das três: ele entra depois, quando a aba Performance mostrou que o tempo está no React.</p>
+    </section>
+
     <section class="lab" id="debounce">
       <div class="lab-head">
         <p class="eyebrow">Experimento · Debounce</p>
@@ -233,6 +344,119 @@ caixas.forEach((el, i) =&gt; {
 <script src="lab.js"></script>
 <script>
 const { $, $$ } = Lab;
+
+/* Core Web Vitals */
+(() => {
+  const RATING = { good: 'bom', warn: 'precisa melhorar', bad: 'ruim' };
+  const rate = (el, v, good, poor) => {
+    const r = v <= good ? 'good' : v <= poor ? 'warn' : 'bad';
+    el.className = 'pill ' + r;
+    el.textContent = RATING[r];
+  };
+  const supported = (window.PerformanceObserver && PerformanceObserver.supportedEntryTypes) || [];
+  const missing = [];
+  const observe = (type, cb, extra = {}) => {
+    if (!supported.includes(type)) { missing.push(type); return; }
+    new PerformanceObserver((list) => cb(list.getEntries())).observe({ type, buffered: true, ...extra });
+  };
+
+  const slot = $('#cwv-slot');
+
+  // LCP: o último candidato antes da primeira interação
+  observe('largest-contentful-paint', (entries) => {
+    const e = entries[entries.length - 1];
+    $('#cwv-lcp').textContent = (e.startTime / 1000).toFixed(2).replace('.', ',') + ' s';
+    rate($('#cwv-lcp-r'), e.startTime, 2500, 4000);
+    const el = e.element;
+    const txt = el ? (el.textContent || '').trim().slice(0, 48) : '';
+    $('#cwv-detail').textContent = el ? `Elemento do LCP: <${el.tagName.toLowerCase()}>${txt ? ' "' + txt + (txt.length === 48 ? '…' : '') + '"' : ''}` : 'Elemento do LCP: removido da página';
+  });
+
+  // INP: a interação mais lenta (com menos de 50 interações, é a pior de todas)
+  const byInteraction = new Map();
+  observe('event', (entries) => {
+    let latest = null;
+    for (const e of entries) {
+      if (!e.interactionId) continue;
+      byInteraction.set(e.interactionId, Math.max(byInteraction.get(e.interactionId) || 0, e.duration));
+      if (!latest || e.interactionId >= latest.interactionId) latest = e;
+    }
+    if (!byInteraction.size) return;
+    const inp = Math.max(...byInteraction.values());
+    $('#cwv-inp').textContent = Math.round(inp) + ' ms';
+    rate($('#cwv-inp-r'), inp, 200, 500);
+    if (latest) $('#cwv-status').textContent = `Última interação: ${latest.name} · ${Math.round(byInteraction.get(latest.interactionId))} ms até a próxima pintura`;
+  }, { durationThreshold: 16 });
+
+  // CLS: a maior "janela" de deslocamentos (até 1 s entre eles, no máximo 5 s)
+  let cls = 0, win = 0, first = 0, last = 0;
+  const describe = (e) => {
+    const nodes = e.sources.map((s) => s.node).filter(Boolean);
+    if (nodes.some((n) => n.closest && n.closest('#vitals') && slot.firstChild)) return 'o aviso empurrou o conteúdo';
+    if (e.startTime < 3000) return 'provavelmente a troca de fonte ao carregar (font-display: swap)';
+    return 'algo mudou de tamanho';
+  };
+  observe('layout-shift', (entries) => {
+    for (const e of entries) {
+      if (e.hadRecentInput) continue;
+      $('#cwv-shift').textContent = `Último deslocamento: ${e.value.toFixed(3).replace('.', ',')} aos ${(e.startTime / 1000).toFixed(1).replace('.', ',')} s · ${describe(e)}`;
+      if (win && e.startTime - last < 1000 && e.startTime - first < 5000) { win += e.value; last = e.startTime; }
+      else { win = e.value; first = last = e.startTime; }
+      cls = Math.max(cls, win);
+    }
+    $('#cwv-cls').textContent = cls.toFixed(3).replace('.', ',');
+    rate($('#cwv-cls-r'), cls, 0.1, 0.25);
+  });
+  if (supported.includes('layout-shift')) rate($('#cwv-cls-r'), 0, 0.1, 0.25);
+
+  if (missing.length) {
+    const s = $('#cwv-support');
+    s.hidden = false;
+    s.textContent = `Este navegador não expõe ${missing.join(', ')}. Abra no Chrome ou no Edge para ver todas as métricas.`;
+    if (missing.includes('largest-contentful-paint')) { $('#cwv-lcp-r').textContent = 'sem suporte'; $('#cwv-detail').textContent = ''; }
+    if (missing.includes('event')) $('#cwv-inp-r').textContent = 'sem suporte';
+    if (missing.includes('layout-shift')) $('#cwv-cls-r').textContent = 'sem suporte';
+  }
+
+  // Provocar INP
+  const ms = $('#inp-ms'), msOut = $('#inp-ms-out'), fb = $('#inp-feedback'), btn = $('#inp-run');
+  ms.addEventListener('input', () => { msOut.textContent = ms.value + ' ms'; });
+  const work = (n) => { const end = performance.now() + n; while (performance.now() < end) {} };
+  const afterNextPaint = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+  let saves = 0;
+  btn.addEventListener('click', async () => {
+    const n = +ms.value, id = ++saves;
+    if ($('input[name=inp-mode]:checked').value === 'block') {
+      work(n);
+      fb.textContent = `Contrato ${id} salvo. A tela ficou ${n} ms sem responder antes de mostrar isto.`;
+    } else {
+      fb.textContent = `Salvando contrato ${id}…`;
+      await afterNextPaint();
+      work(n);
+      fb.textContent = `Contrato ${id} salvo. A resposta apareceu antes dos ${n} ms de trabalho.`;
+    }
+  });
+
+  // Provocar CLS
+  const run = $('#cls-run'), clsFb = $('#cls-feedback');
+  let timer = null;
+  const resetSlot = () => {
+    clearTimeout(timer);
+    slot.textContent = '';
+    slot.className = $('input[name=cls-mode]:checked').value === 'reserved' ? 'reserved' : '';
+  };
+  $$('input[name=cls-mode]').forEach((r) => r.addEventListener('change', resetSlot));
+  $('#cls-reset').addEventListener('click', () => { resetSlot(); clsFb.textContent = 'Escolha o modo e simule a resposta.'; });
+  $('#cls-run').addEventListener('click', () => {
+    resetSlot();
+    clsFb.textContent = 'Aguardando a API…';
+    timer = setTimeout(() => {
+      clsFb.textContent = slot.className === 'reserved' ? 'O aviso chegou no espaço que já existia.' : 'O aviso chegou e empurrou tudo para baixo.';
+      slot.innerHTML = '<div class="cwv-banner"><b>Atenção: 2 contratos vencem esta semana</b>Revise as posições antes do fechamento. Este aviso chegou da API depois que a página já estava na tela.</div>';
+    }, 1000);
+  });
+  resetSlot();
+})();
 
 /* Debounce */
 (() => {
