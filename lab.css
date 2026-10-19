@@ -159,6 +159,21 @@ details.src summary { cursor: pointer; font-weight: 600; font-size: 14px; color:
 .takeaway { margin: 0; padding-top: 14px; border-top: 1px dashed var(--line); font-size: 15px; max-width: 76ch; }
 .takeaway b { font-family: var(--f-display); }
 
+/* Cartões de comparação (prós e contras, ferramentas, referências) */
+.tradeoff { display: grid; gap: 14px; }
+.tradeoff-q { margin: 0; max-width: 72ch; color: var(--muted); }
+.tradeoff-q b { color: var(--ink); }
+.tradeoff-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.tcard { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.tcard h3 { font-size: 16px; }
+.tcard p { margin: 0; font-size: 14px; color: var(--muted); }
+.tcard ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
+.tcard li b { font-weight: 600; }
+.tcard.combo { border-color: var(--accent); }
+.tcard .code { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tradeoff-grid.four { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.tcard code { overflow-wrap: anywhere; }
+
 .table-wrap { overflow-x: auto; }
 table.grid { border-collapse: collapse; width: 100%; font-size: 14px; }
 table.grid th, table.grid td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }

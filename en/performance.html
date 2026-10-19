@@ -13,16 +13,6 @@
   .vrow { height: 32px; line-height: 32px; padding: 0 12px; border-bottom: 1px solid var(--line); font: 13px/32px var(--f-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #thr-area { display: flex; flex-wrap: wrap; gap: 2px; max-height: 120px; overflow: hidden; }
   .tbox { height: 8px; background: var(--accent); opacity: 0.55; border-radius: 2px; }
-  .tradeoff { display: grid; gap: 14px; }
-  .tradeoff-q { margin: 0; max-width: 72ch; color: var(--muted); }
-  .tradeoff-q b { color: var(--ink); }
-  .tradeoff-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
-  .tcard { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
-  .tcard h3 { font-size: 16px; }
-  .tcard p { margin: 0; font-size: 14px; color: var(--muted); }
-  .tcard ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
-  .tcard li b { font-weight: 600; }
-  .tcard.combo { border-color: var(--accent); }
   .stat .pill { justify-self: start; }
   .cwv-group { display: grid; gap: 10px; padding-top: 12px; border-top: 1px dashed var(--line); }
   .cwv-group:first-child { padding-top: 0; border-top: 0; }
@@ -65,6 +55,17 @@
             <tr><td><b>CLS</b><br><small>Cumulative Layout Shift</small></td><td>How much visible content moves without the user asking for it</td><td><span class="pill good">≤ 0.1</span></td><td><span class="pill bad">&gt; 0.25</span></td><td>Images without <code>width</code>/<code>height</code>, a notice or ad inserted above the content, a font that changes size, a skeleton with a different height than the content</td></tr>
           </tbody>
         </table>
+      </div>
+      <div class="tcard">
+        <h3>Why CLS has no unit</h3>
+        <p>LCP is measured in seconds and INP in milliseconds. CLS is a <b>score</b>: every time something visible moves without the user asking for it, the browser computes</p>
+        <pre class="code">shift = impact fraction × distance fraction</pre>
+        <ul>
+          <li><b>Impact fraction:</b> how much of the viewport the moved elements cover, counting both their old and new positions.</li>
+          <li><b>Distance fraction:</b> how far they moved, divided by the viewport's largest dimension (usually the height).</li>
+          <li><b>Why "cumulative":</b> shifts are added up in windows, less than 1 s apart and at most 5 s long. The page's CLS is the window with the largest sum, not the sum of the whole visit. That is why clicking the banner below several times doesn't make the number grow forever.</li>
+        </ul>
+        <p>Example from this experiment, in a 900 px tall viewport: the 180 px banner pushes about 60% of the screen. 0.6 × (180 ÷ 900) ≈ 0.12, close to what the panel measures.</p>
       </div>
       <div id="cwv-slot" aria-live="polite"></div>
       <div class="playground">
@@ -149,6 +150,45 @@ new PerformanceObserver((list) =&gt; {
 .cover { aspect-ratio: 16 / 9 }</pre></div>
         </div>
       </details>
+      <div class="tradeoff">
+        <h3>Lighthouse, the Performance panel or the React Profiler?</h3>
+        <p class="tradeoff-q">None of them is better: each one answers a different question. And <b>DevTools is not an extension</b>, it ships with Chrome (F12). The extension you install is <b>React DevTools</b>, and the React Profiler lives inside it.</p>
+        <div class="tradeoff-grid four">
+          <div class="tcard">
+            <span class="pill neutral" style="justify-self:start">DevTools Lighthouse panel</span>
+            <h3>Does the page load well?</h3>
+            <ul>
+              <li>A 0–100 score with LCP, CLS and TBT, plus hints such as heavy images and unused JS.</li>
+              <li>It is a lab measurement: run it in an incognito tab with mobile throttling and compare before and after.</li>
+              <li>It doesn't measure INP, because it doesn't click anything.</li>
+            </ul>
+          </div>
+          <div class="tcard">
+            <span class="pill neutral" style="justify-self:start">DevTools Performance panel</span>
+            <h3>Where did the time go?</h3>
+            <ul>
+              <li>A timeline of JS, style recalculation, layout and paint. Long tasks (over 50 ms) are flagged in red.</li>
+              <li>Shows LCP, INP and CLS live while you use the page.</li>
+              <li>The layout thrashing and 50,000-row experiments in this module show up here.</li>
+            </ul>
+          </div>
+          <div class="tcard">
+            <span class="pill neutral" style="justify-self:start">React DevTools extension</span>
+            <h3>Which component rendered, and why?</h3>
+            <ul>
+              <li>Only sees React: how many times each component rendered and what it cost.</li>
+              <li>Turn on "Highlight updates" and "Record why each component rendered".</li>
+              <li>Doesn't measure any Core Web Vital.</li>
+            </ul>
+          </div>
+          <div class="tcard combo">
+            <span class="pill good" style="justify-self:start">The order</span>
+            <h3>Assess, locate, pinpoint</h3>
+            <p>Lighthouse gives the overall loading diagnosis. The Performance panel shows whether the bottleneck is JS, layout or paint. The React Profiler comes in when the Performance panel shows the time is spent in React.</p>
+            <p>In an app behind a login, the problem is usually interaction, not loading: you will use the last two the most.</p>
+          </div>
+        </div>
+      </div>
       <p class="takeaway"><b>Senior take.</b> The score that counts is the field score: Google uses the 75th percentile of real Chrome visits (CrUX), not your laptop. Lighthouse measures LCP and CLS in the lab, but not INP, because it doesn't click anything: instead it shows TBT, which is only an approximation. For INP, use the DevTools Performance tab (which shows all three metrics live while you use the page) and <code>web-vitals</code> in production. The React Profiler measures none of the three: it comes in later, once the Performance tab has shown the time is spent in React.</p>
     </section>
 
@@ -248,7 +288,7 @@ v.getVirtualItems().map(item =&gt; &lt;Row key={item.key} style={{ transform: `t
       <div class="tradeoff">
         <h3>Virtualize, paginate or filter on the server?</h3>
         <p class="tradeoff-q">The three don't compete: they solve different bottlenecks. Virtualizing cuts the cost of <b>drawing</b> (the data is already in the browser, the DOM is what weighs). Paginating or filtering on the server cuts the cost of <b>fetching and transferring</b>. Ask: is it slow because the browser draws too much, or because too much data arrives?</p>
-        <div class="tradeoff-grid">
+        <div class="tradeoff-grid four">
           <div class="tcard">
             <span class="pill good" style="justify-self:start">Virtualize</span>
             <h3>When it wins</h3>

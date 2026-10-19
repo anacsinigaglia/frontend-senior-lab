@@ -13,16 +13,6 @@
   .vrow { height: 32px; line-height: 32px; padding: 0 12px; border-bottom: 1px solid var(--line); font: 13px/32px var(--f-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #thr-area { display: flex; flex-wrap: wrap; gap: 2px; max-height: 120px; overflow: hidden; }
   .tbox { height: 8px; background: var(--accent); opacity: 0.55; border-radius: 2px; }
-  .tradeoff { display: grid; gap: 14px; }
-  .tradeoff-q { margin: 0; max-width: 72ch; color: var(--muted); }
-  .tradeoff-q b { color: var(--ink); }
-  .tradeoff-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
-  .tcard { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
-  .tcard h3 { font-size: 16px; }
-  .tcard p { margin: 0; font-size: 14px; color: var(--muted); }
-  .tcard ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
-  .tcard li b { font-weight: 600; }
-  .tcard.combo { border-color: var(--accent); }
   .stat .pill { justify-self: start; }
   .cwv-group { display: grid; gap: 10px; padding-top: 12px; border-top: 1px dashed var(--line); }
   .cwv-group:first-child { padding-top: 0; border-top: 0; }
@@ -65,6 +55,17 @@
             <tr><td><b>CLS</b><br><small>Cumulative Layout Shift</small></td><td>Quanto o conteúdo visível muda de lugar sem a pessoa ter pedido</td><td><span class="pill good">≤ 0,1</span></td><td><span class="pill bad">&gt; 0,25</span></td><td>Imagem sem <code>width</code>/<code>height</code>, aviso ou anúncio inserido acima do conteúdo, fonte que troca de tamanho, skeleton com altura diferente do conteúdo</td></tr>
           </tbody>
         </table>
+      </div>
+      <div class="tcard">
+        <h3>Por que o CLS não tem unidade</h3>
+        <p>O LCP é medido em segundos e o INP em milissegundos. O CLS é uma <b>pontuação</b>: cada vez que algo visível muda de lugar sem a pessoa pedir, o navegador calcula</p>
+        <pre class="code">deslocamento = fração de impacto × fração de distância</pre>
+        <ul>
+          <li><b>Fração de impacto:</b> quanto da janela os elementos que se moveram ocupam, somando a posição de antes e a de depois.</li>
+          <li><b>Fração de distância:</b> quanto eles andaram, dividido pela maior dimensão da janela (normalmente a altura).</li>
+          <li><b>Por que "cumulativo":</b> os deslocamentos são somados em janelas, com menos de 1 s entre eles e no máximo 5 s no total. O CLS da página é a janela de maior soma, não a soma da visita inteira. Por isso clicar várias vezes no aviso abaixo não faz o número subir sem parar.</li>
+        </ul>
+        <p>Exemplo deste experimento, numa janela de 900 px de altura: o aviso de 180 px empurra cerca de 60% da tela. 0,6 × (180 ÷ 900) ≈ 0,12, perto do que o painel mede.</p>
       </div>
       <div id="cwv-slot" aria-live="polite"></div>
       <div class="playground">
@@ -149,6 +150,45 @@ new PerformanceObserver((lista) =&gt; {
 .capa { aspect-ratio: 16 / 9 }</pre></div>
         </div>
       </details>
+      <div class="tradeoff">
+        <h3>Lighthouse, aba Performance ou React Profiler?</h3>
+        <p class="tradeoff-q">Nenhuma é melhor que as outras: cada uma responde a uma pergunta. E o <b>DevTools não é uma extensão</b>, é a ferramenta que já vem no Chrome (F12). A extensão que você instala é o <b>React DevTools</b>, e o React Profiler fica dentro dela.</p>
+        <div class="tradeoff-grid four">
+          <div class="tcard">
+            <span class="pill neutral" style="justify-self:start">Aba Lighthouse do DevTools</span>
+            <h3>A página carrega bem?</h3>
+            <ul>
+              <li>Nota de 0 a 100 com LCP, CLS e TBT, e dicas como imagem pesada e JS sem uso.</li>
+              <li>É uma medição de laboratório: rode em aba anônima, com throttling de celular, e compare antes e depois.</li>
+              <li>Não mede INP, porque não clica em nada.</li>
+            </ul>
+          </div>
+          <div class="tcard">
+            <span class="pill neutral" style="justify-self:start">Aba Performance do DevTools</span>
+            <h3>Onde o tempo foi gasto?</h3>
+            <ul>
+              <li>Linha do tempo com JS, cálculo de estilo, layout e pintura. Tarefas longas (acima de 50 ms) aparecem marcadas em vermelho.</li>
+              <li>Mostra LCP, INP e CLS ao vivo enquanto você usa a página.</li>
+              <li>Os experimentos de layout thrashing e das 50 mil linhas deste módulo aparecem aqui.</li>
+            </ul>
+          </div>
+          <div class="tcard">
+            <span class="pill neutral" style="justify-self:start">Extensão React DevTools</span>
+            <h3>Qual componente renderizou, e por quê?</h3>
+            <ul>
+              <li>Só enxerga o React: quantas vezes cada componente renderizou e quanto custou.</li>
+              <li>Ative "Highlight updates" e "Record why each component rendered".</li>
+              <li>Não mede nenhuma das Core Web Vitals.</li>
+            </ul>
+          </div>
+          <div class="tcard combo">
+            <span class="pill good" style="justify-self:start">A ordem</span>
+            <h3>Avaliar, localizar, apontar</h3>
+            <p>O Lighthouse dá o diagnóstico geral do carregamento. A aba Performance mostra se o gargalo é JS, layout ou pintura. O React Profiler entra quando a aba Performance mostra que o tempo está no React.</p>
+            <p>Num app atrás de login, o problema costuma ser a interação, não o carregamento: você vai usar mais as duas últimas.</p>
+          </div>
+        </div>
+      </div>
       <p class="takeaway"><b>Leitura de sênior.</b> A nota que conta é a de campo: o Google usa o percentil 75 das visitas reais do Chrome (CrUX), não o seu notebook. O Lighthouse mede LCP e CLS em laboratório, mas não mede INP, porque não clica em nada: no lugar ele mostra o TBT, que só aproxima. Para INP, use a aba Performance do DevTools (que mostra as três métricas ao vivo enquanto você usa a página) e a <code>web-vitals</code> em produção. O React Profiler não mede nenhuma das três: ele entra depois, quando a aba Performance mostrou que o tempo está no React.</p>
     </section>
 
@@ -248,7 +288,7 @@ v.getVirtualItems().map(item =&gt; &lt;Linha key={item.key} style={{ transform: 
       <div class="tradeoff">
         <h3>Virtualizar, paginar ou filtrar no servidor?</h3>
         <p class="tradeoff-q">As três não competem: resolvem gargalos diferentes. Virtualizar reduz o custo de <b>desenhar</b> (os dados já estão no navegador, o DOM é que pesa). Paginar ou filtrar no servidor reduz o custo de <b>buscar e trafegar</b>. Pergunte: está lento porque o navegador desenha demais, ou porque chega dado demais?</p>
-        <div class="tradeoff-grid">
+        <div class="tradeoff-grid four">
           <div class="tcard">
             <span class="pill good" style="justify-self:start">Virtualizar</span>
             <h3>Quando é melhor</h3>

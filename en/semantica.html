@@ -34,6 +34,8 @@
   .swatch .big { font: 700 24px/1.1 var(--f-display); }
   .color-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   input[type="color"] { width: 100%; height: 40px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); padding: 3px; }
+  .fake-link { color: var(--accent); text-decoration: underline; cursor: pointer; justify-self: start; }
+  .checklist { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
 </style>
 </head>
 <body data-module="semantica">
@@ -129,6 +131,42 @@
           <ol class="sr-out" id="semantic-out"></ol>
         </div>
       </div>
+      <div class="tradeoff">
+        <h3>What navigation shortcuts are</h3>
+        <p class="tradeoff-q">Sighted users glance at the page and go straight to what matters. Screen reader users can't, and listening to everything in order would take minutes. So the screen reader builds <b>lists of the page's elements</b> and offers keys to jump between them. Those lists only include real elements: the <code>&lt;div class="ttl"&gt;</code> in the card on the left doesn't make it into the headings list.</p>
+        <div class="table-wrap">
+          <table class="grid">
+            <thead><tr><th>Key (NVDA and JAWS)</th><th>Jumps to the next…</th><th>Comes from</th></tr></thead>
+            <tbody>
+              <tr><td><kbd>H</kbd> or <kbd>1</kbd>–<kbd>6</kbd></td><td>heading (or heading of that level)</td><td><code>&lt;h1&gt;</code>–<code>&lt;h6&gt;</code></td></tr>
+              <tr><td><kbd>D</kbd> (NVDA) / <kbd>R</kbd> (JAWS)</td><td>region (landmark)</td><td><code>&lt;header&gt;</code>, <code>&lt;nav&gt;</code>, <code>&lt;main&gt;</code>, <code>&lt;aside&gt;</code>, <code>&lt;footer&gt;</code></td></tr>
+              <tr><td><kbd>K</kbd></td><td>link</td><td><code>&lt;a href&gt;</code></td></tr>
+              <tr><td><kbd>B</kbd></td><td>button</td><td><code>&lt;button&gt;</code></td></tr>
+              <tr><td><kbd>F</kbd></td><td>form field</td><td><code>&lt;input&gt;</code>, <code>&lt;select&gt;</code>, <code>&lt;textarea&gt;</code></td></tr>
+              <tr><td><kbd>T</kbd></td><td>table</td><td><code>&lt;table&gt;</code></td></tr>
+              <tr><td><kbd>L</kbd></td><td>list</td><td><code>&lt;ul&gt;</code>, <code>&lt;ol&gt;</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tradeoff-grid">
+          <div class="tcard">
+            <h3>In VoiceOver: the rotor</h3>
+            <p>In NVDA and JAWS, Shift plus the key goes back to the previous one. On the Mac and iPhone, the equivalent is the rotor: <kbd>VO</kbd>+<kbd>U</kbd> on the Mac, or a two-finger twist on the iPhone screen. It opens the lists of headings, links, regions and fields.</p>
+            <p>In WebAIM's survey of screen reader users, navigating by headings is the most common way to look for information on a page.</p>
+          </div>
+          <div class="tcard">
+            <h3>A shortcut you build: the skip link</h3>
+            <p>It is hidden and shows up on the first <kbd>Tab</kbd>. It moves focus straight to the content, so keyboard users don't tab through the whole menu on every page.</p>
+<pre class="code">&lt;a class="skip" href="#content"&gt;Skip to content&lt;/a&gt;
+…
+&lt;main id="content"&gt;…&lt;/main&gt;</pre>
+          </div>
+          <div class="tcard combo">
+            <h3>How to test it</h3>
+            <p>Turn on VoiceOver (<kbd>⌘</kbd>+<kbd>F5</kbd>) on one of your pages, open the rotor (<kbd>VO</kbd>+<kbd>U</kbd>) and read only the headings list. If it reads like the page's table of contents, the structure is good. If it is empty or full of "Click here", it isn't yet.</p>
+          </div>
+        </div>
+      </div>
       <p class="takeaway"><b>Senior take.</b> Screen reader users often jump from heading to heading (the H key) or from region to region. Without <code>&lt;h3&gt;</code> and <code>&lt;nav&gt;</code>, they have to listen to the whole page line by line. Also note "Cancel order #1042": in a list, ten buttons named just "Cancel" do not say which order each one cancels.</p>
     </section>
 
@@ -177,6 +215,72 @@ const contrast = (a, b) =&gt; {
 }</pre>
       </details>
       <p class="takeaway"><b>Senior take.</b> Color should never be the only signal. An "overdue" status in red also needs text or an icon, because about 8% of men have some form of color blindness.</p>
+    </section>
+
+    <section class="lab" id="alem">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Beyond accessibility</p>
+        <h2>What the right element gives you for free</h2>
+        <p>Semantic HTML is not only for screen readers. The browser, search engines, phones and testing tools depend on it too. Start with the two "links" below: they look the same and go to the same place.</p>
+      </div>
+      <div class="playground even">
+        <div class="controls">
+          <p class="code-label">&lt;div onClick&gt;</p>
+          <div class="fake-link" id="fake-link">Go to the contrast experiment</div>
+          <p class="code-label" style="margin-top:8px">&lt;a href&gt;</p>
+          <a href="#contraste" style="justify-self:start">Go to the contrast experiment</a>
+        </div>
+        <div class="output">
+          <p class="hint">Try both:</p>
+          <ul class="checklist">
+            <li><kbd>⌘</kbd>/<kbd>Ctrl</kbd> + click, or middle click: does it open a new tab?</li>
+            <li>Right click: is there a "Copy link address" option?</li>
+            <li>Hover: does the URL show up in the corner of the window?</li>
+            <li><kbd>Tab</kbd>: does focus reach it?</li>
+          </ul>
+          <p class="hint">Only the <code>&lt;a href&gt;</code> does all of this without a single line of JavaScript. And search engines only follow real links.</p>
+        </div>
+      </div>
+      <div class="tradeoff-grid">
+        <div class="tcard">
+          <h3>1. Built-in behavior</h3>
+          <ul>
+            <li><code>&lt;a href&gt;</code>: new tab, copy link, history and prefetch.</li>
+            <li><code>&lt;button&gt;</code> in a <code>&lt;form&gt;</code>: submits on Enter, respects <code>disabled</code> and joins native validation (<code>required</code>, <code>type="email"</code>).</li>
+            <li><code>&lt;details&gt;</code>, <code>&lt;dialog&gt;</code> and <code>popover</code>: open, close, <kbd>Esc</kbd> and focus, with no library.</li>
+          </ul>
+        </div>
+        <div class="tcard">
+          <h3>2. Phones and autofill</h3>
+          <p><code>type="email"</code>, <code>"tel"</code> and <code>"number"</code> open the right keyboard on phones. <code>autocomplete="email"</code>, <code>"one-time-code"</code> and <code>"current-password"</code> let the browser and the password manager fill fields in for you.</p>
+        </div>
+        <div class="tcard">
+          <h3>3. Less JavaScript, more robustness</h3>
+          <p>Native elements are implemented by the browser itself: less code in the bundle and fewer handlers. The page works before the JS loads and when it fails: a link is still a link and a form still submits.</p>
+        </div>
+        <div class="tcard">
+          <h3>4. SEO</h3>
+          <p>Google discovers pages by following <code>&lt;a href&gt;</code>: navigation built with <code>onClick</code> isn't crawled. Headings, <code>&lt;main&gt;</code>, <code>&lt;article&gt;</code> and <code>&lt;nav&gt;</code> tell it what is main content and what is menu or footer.</p>
+        </div>
+        <div class="tcard">
+          <h3>5. Other tools read the structure</h3>
+          <p>Safari and Firefox reader mode, the browser's translator, printing, extensions and AI agents browsing for you all use <code>&lt;main&gt;</code>, <code>&lt;article&gt;</code>, headings and <code>&lt;table&gt;</code> with <code>&lt;th&gt;</code> to know what matters.</p>
+        </div>
+        <div class="tcard">
+          <h3>6. Tests that don't break for no reason</h3>
+          <p>Testing Library and Playwright query elements by role. With semantic HTML this just works, and the test survives class and layout changes. With <code>&lt;div&gt;</code> you are left with <code>data-testid</code>, which tests the implementation instead of what the user sees.</p>
+<pre class="code">screen.getByRole('button', { name: 'Save' })</pre>
+        </div>
+        <div class="tcard">
+          <h3>7. Code that explains itself</h3>
+          <p><code>&lt;nav&gt;&lt;ul&gt;&lt;li&gt;&lt;a&gt;</code> says what it is. <code>&lt;div class="nav-wrapper"&gt;</code> makes you open the CSS and the JS. In code review, it also exposes intent bugs: a "button" that navigates should be a link.</p>
+        </div>
+        <div class="tcard">
+          <h3>8. New features land on native elements</h3>
+          <p><code>&lt;dialog&gt;</code>, <code>popover</code>, customizable <code>&lt;select&gt;</code> and <code>&lt;search&gt;</code>: the browser keeps evolving on top of the standard elements, and whoever already uses them gets the new features for free.</p>
+        </div>
+      </div>
+      <p class="takeaway"><b>Senior take.</b> Before putting an <code>onClick</code> on a <code>&lt;div&gt;</code>, ask whether an element already does that. It almost always does, and it brings keyboard support, accessibility, SEO and better tests along with it.</p>
     </section>
 
     <section id="decidir"></section>
@@ -313,6 +417,10 @@ Lab.decision($('#decidir'), {
     }[a.papel];
   },
 });
+</script>
+<script>
+/* Além da acessibilidade: o "link" feito com div só navega por script */
+Lab.$('#fake-link').addEventListener('click', () => { location.hash = 'contraste'; });
 </script>
 </body>
 </html>

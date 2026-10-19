@@ -34,6 +34,8 @@
   .swatch .big { font: 700 24px/1.1 var(--f-display); }
   .color-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   input[type="color"] { width: 100%; height: 40px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); padding: 3px; }
+  .fake-link { color: var(--accent); text-decoration: underline; cursor: pointer; justify-self: start; }
+  .checklist { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
 </style>
 </head>
 <body data-module="semantica">
@@ -129,6 +131,42 @@
           <ol class="sr-out" id="semantic-out"></ol>
         </div>
       </div>
+      <div class="tradeoff">
+        <h3>O que são atalhos de navegação</h3>
+        <p class="tradeoff-q">Quem enxerga bate o olho na página e vai direto ao que interessa. Quem usa leitor de tela não consegue fazer isso, e ouvir tudo em ordem levaria minutos. Por isso o leitor de tela monta <b>listas dos elementos da página</b> e oferece teclas para pular entre eles. Essas listas só incluem elementos reais: a <code>&lt;div class="ttl"&gt;</code> do cartão da esquerda não entra na lista de títulos.</p>
+        <div class="table-wrap">
+          <table class="grid">
+            <thead><tr><th>Tecla (NVDA e JAWS)</th><th>Pula para o próximo…</th><th>Vem de</th></tr></thead>
+            <tbody>
+              <tr><td><kbd>H</kbd> ou <kbd>1</kbd>–<kbd>6</kbd></td><td>título (ou título daquele nível)</td><td><code>&lt;h1&gt;</code>–<code>&lt;h6&gt;</code></td></tr>
+              <tr><td><kbd>D</kbd> (NVDA) / <kbd>R</kbd> (JAWS)</td><td>região (landmark)</td><td><code>&lt;header&gt;</code>, <code>&lt;nav&gt;</code>, <code>&lt;main&gt;</code>, <code>&lt;aside&gt;</code>, <code>&lt;footer&gt;</code></td></tr>
+              <tr><td><kbd>K</kbd></td><td>link</td><td><code>&lt;a href&gt;</code></td></tr>
+              <tr><td><kbd>B</kbd></td><td>botão</td><td><code>&lt;button&gt;</code></td></tr>
+              <tr><td><kbd>F</kbd></td><td>campo de formulário</td><td><code>&lt;input&gt;</code>, <code>&lt;select&gt;</code>, <code>&lt;textarea&gt;</code></td></tr>
+              <tr><td><kbd>T</kbd></td><td>tabela</td><td><code>&lt;table&gt;</code></td></tr>
+              <tr><td><kbd>L</kbd></td><td>lista</td><td><code>&lt;ul&gt;</code>, <code>&lt;ol&gt;</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tradeoff-grid">
+          <div class="tcard">
+            <h3>No VoiceOver: o rotor</h3>
+            <p>No NVDA e no JAWS, Shift com a tecla volta para o anterior. No Mac e no iPhone, o equivalente é o rotor: <kbd>VO</kbd>+<kbd>U</kbd> no Mac, ou girar dois dedos na tela do iPhone. Ele abre as listas de títulos, links, regiões e campos.</p>
+            <p>Na pesquisa da WebAIM com usuários de leitor de tela, navegar pelos títulos é a forma mais comum de procurar informação numa página.</p>
+          </div>
+          <div class="tcard">
+            <h3>Um atalho que você cria: o skip link</h3>
+            <p>Fica escondido e aparece no primeiro <kbd>Tab</kbd>. Leva o foco direto para o conteúdo, para quem usa teclado não passar pelo menu inteiro a cada página.</p>
+<pre class="code">&lt;a class="skip" href="#conteudo"&gt;Pular para o conteúdo&lt;/a&gt;
+…
+&lt;main id="conteudo"&gt;…&lt;/main&gt;</pre>
+          </div>
+          <div class="tcard combo">
+            <h3>Como testar</h3>
+            <p>Ative o VoiceOver (<kbd>⌘</kbd>+<kbd>F5</kbd>) numa página sua, abra o rotor (<kbd>VO</kbd>+<kbd>U</kbd>) e leia só a lista de títulos. Se ela parecer o índice da página, a estrutura está boa. Se estiver vazia ou cheia de "Clique aqui", ainda não está.</p>
+          </div>
+        </div>
+      </div>
       <p class="takeaway"><b>Leitura de sênior.</b> Quem usa leitor de tela costuma pular de título em título (tecla H) ou de região em região. Sem <code>&lt;h3&gt;</code> e <code>&lt;nav&gt;</code>, essa pessoa precisa ouvir a página inteira linha a linha. Repare também em "Cancelar pedido #1042": numa lista, dez botões chamados só "Cancelar" não dizem qual pedido cada um cancela.</p>
     </section>
 
@@ -177,6 +215,72 @@ const contraste = (a, b) =&gt; {
 }</pre>
       </details>
       <p class="takeaway"><b>Leitura de sênior.</b> Cor nunca deve ser o único sinal. Um status "vencido" em vermelho também precisa de texto ou ícone, porque cerca de 8% dos homens têm alguma forma de daltonismo.</p>
+    </section>
+
+    <section class="lab" id="alem">
+      <div class="lab-head">
+        <p class="eyebrow">Experimento · Além da acessibilidade</p>
+        <h2>O que o elemento certo te dá de graça</h2>
+        <p>HTML semântico não serve só ao leitor de tela. O navegador, o buscador, o celular e as ferramentas de teste também dependem dele. Comece pelos dois "links" abaixo: eles têm a mesma aparência e levam ao mesmo lugar.</p>
+      </div>
+      <div class="playground even">
+        <div class="controls">
+          <p class="code-label">&lt;div onClick&gt;</p>
+          <div class="fake-link" id="fake-link">Ir para o experimento de contraste</div>
+          <p class="code-label" style="margin-top:8px">&lt;a href&gt;</p>
+          <a href="#contraste" style="justify-self:start">Ir para o experimento de contraste</a>
+        </div>
+        <div class="output">
+          <p class="hint">Teste nos dois:</p>
+          <ul class="checklist">
+            <li><kbd>⌘</kbd>/<kbd>Ctrl</kbd> + clique, ou botão do meio: abre em nova aba?</li>
+            <li>Botão direito: aparece "Copiar endereço do link"?</li>
+            <li>Mouse por cima: a URL aparece no canto da janela?</li>
+            <li><kbd>Tab</kbd>: o foco chega nele?</li>
+          </ul>
+          <p class="hint">Só o <code>&lt;a href&gt;</code> faz tudo isso sem uma linha de JavaScript. E o buscador só segue links de verdade.</p>
+        </div>
+      </div>
+      <div class="tradeoff-grid">
+        <div class="tcard">
+          <h3>1. Comportamento pronto</h3>
+          <ul>
+            <li><code>&lt;a href&gt;</code>: nova aba, copiar o link, histórico e prefetch.</li>
+            <li><code>&lt;button&gt;</code> num <code>&lt;form&gt;</code>: envia com Enter, respeita <code>disabled</code> e entra na validação nativa (<code>required</code>, <code>type="email"</code>).</li>
+            <li><code>&lt;details&gt;</code>, <code>&lt;dialog&gt;</code> e <code>popover</code>: abrir, fechar, <kbd>Esc</kbd> e foco, sem biblioteca.</li>
+          </ul>
+        </div>
+        <div class="tcard">
+          <h3>2. Celular e preenchimento automático</h3>
+          <p><code>type="email"</code>, <code>"tel"</code> e <code>"number"</code> abrem o teclado certo no celular. <code>autocomplete="email"</code>, <code>"one-time-code"</code> e <code>"current-password"</code> deixam o navegador e o gerenciador de senhas preencherem sozinhos.</p>
+        </div>
+        <div class="tcard">
+          <h3>3. Menos JavaScript, mais robustez</h3>
+          <p>Os elementos nativos são implementados pelo próprio navegador: menos código no bundle e menos handlers. A página funciona antes de o JS carregar e quando ele falha: o link continua sendo link e o formulário continua enviando.</p>
+        </div>
+        <div class="tcard">
+          <h3>4. SEO</h3>
+          <p>O Google descobre páginas seguindo <code>&lt;a href&gt;</code>: navegação feita com <code>onClick</code> não é rastreada. Títulos, <code>&lt;main&gt;</code>, <code>&lt;article&gt;</code> e <code>&lt;nav&gt;</code> dizem o que é conteúdo principal e o que é menu ou rodapé.</p>
+        </div>
+        <div class="tcard">
+          <h3>5. Outras ferramentas leem a estrutura</h3>
+          <p>O modo leitura do Safari e do Firefox, o tradutor do navegador, a impressão, as extensões e os agentes de IA que navegam por você usam <code>&lt;main&gt;</code>, <code>&lt;article&gt;</code>, títulos e <code>&lt;table&gt;</code> com <code>&lt;th&gt;</code> para saber o que importa.</p>
+        </div>
+        <div class="tcard">
+          <h3>6. Testes que não quebram à toa</h3>
+          <p>Testing Library e Playwright buscam elementos pelo papel. Com HTML semântico isso funciona direto, e o teste sobrevive a mudanças de classe e de layout. Com <code>&lt;div&gt;</code>, sobra o <code>data-testid</code>, que testa a implementação e não o que a pessoa vê.</p>
+<pre class="code">screen.getByRole('button', { name: 'Salvar' })</pre>
+        </div>
+        <div class="tcard">
+          <h3>7. Código que se explica</h3>
+          <p><code>&lt;nav&gt;&lt;ul&gt;&lt;li&gt;&lt;a&gt;</code> diz o que é. <code>&lt;div class="nav-wrapper"&gt;</code> obriga a abrir o CSS e o JS. Na revisão de código, isso também revela erros de intenção: um "botão" que navega deveria ser um link.</p>
+        </div>
+        <div class="tcard">
+          <h3>8. Os recursos novos chegam aos nativos</h3>
+          <p><code>&lt;dialog&gt;</code>, <code>popover</code>, <code>&lt;select&gt;</code> customizável e <code>&lt;search&gt;</code>: o navegador evolui em cima dos elementos padrão, e quem já os usa ganha os recursos de graça.</p>
+        </div>
+      </div>
+      <p class="takeaway"><b>Leitura de sênior.</b> Antes de colocar <code>onClick</code> numa <code>&lt;div&gt;</code>, pergunte se já existe um elemento que faz isso. Quase sempre existe, e ele traz junto teclado, acessibilidade, SEO e testes melhores.</p>
     </section>
 
     <section id="decidir"></section>
@@ -313,6 +417,10 @@ Lab.decision($('#decidir'), {
     }[a.papel];
   },
 });
+</script>
+<script>
+/* Além da acessibilidade: o "link" feito com div só navega por script */
+Lab.$('#fake-link').addEventListener('click', () => { location.hash = 'contraste'; });
 </script>
 </body>
 </html>
