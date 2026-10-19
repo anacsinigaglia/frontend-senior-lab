@@ -94,6 +94,56 @@
   Salvar contrato
 &lt;/button&gt;</pre></div>
       </div>
+      <div class="tradeoff" id="tipo-botao">
+        <h3>O que muda com <code>type="submit"</code>, <code>"button"</code> ou sem <code>type</code></h3>
+        <p class="tradeoff-q"><code>&lt;button&gt;</code> é o elemento: algo clicável que faz uma ação. O <code>type</code> diz o que ele faz <b>dentro de um formulário</b>, do mesmo jeito que <code>&lt;input type="text"&gt;</code> e <code>&lt;input type="checkbox"&gt;</code> são o mesmo elemento com comportamentos diferentes. O detalhe que confunde: <b>sem <code>type</code>, o botão é <code>submit</code></b>. Por isso <code>type="button"</code> existe: quer dizer "botão comum, que não envia".</p>
+        <div class="playground even">
+          <form class="controls" id="sub-form">
+            <div class="field">
+              <label for="sub-email">E-mail do produtor</label>
+              <input type="email" id="sub-email" name="email" required placeholder="joao@fazenda.com.br">
+            </div>
+            <div class="row">
+              <button class="btn" id="sub-none">Mostrar ajuda <small>(sem type)</small></button>
+              <button type="button" class="btn" id="sub-button">Mostrar ajuda <small>(type="button")</small></button>
+            </div>
+            <div class="row">
+              <button type="submit" class="btn primary" name="acao" value="salvar">Salvar <small>(submit)</small></button>
+              <button type="submit" class="btn" name="acao" value="rascunho" formnovalidate>Salvar rascunho <small>(formnovalidate)</small></button>
+            </div>
+            <label class="row" style="font-size:14px"><input type="checkbox" id="sub-validate" checked> Validação nativa ligada</label>
+          </form>
+          <div class="output">
+            <p class="hint">Teste: clique em cada botão, aperte <kbd>Enter</kbd> no campo e tente salvar com o campo vazio ou com um e-mail inválido.</p>
+            <ul class="log" id="sub-log" data-empty="Nada aconteceu ainda." aria-live="polite"></ul>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="grid">
+            <thead><tr><th>Dentro de um <code>&lt;form&gt;</code></th><th>O clique…</th><th>Use para</th></tr></thead>
+            <tbody>
+              <tr><td><code>type="submit"</code> (o padrão)</td><td>valida os campos e dispara o <code>submit</code> do formulário. <kbd>Enter</kbd> num campo de texto faz o mesmo.</td><td>o botão que salva ou envia</td></tr>
+              <tr><td><code>type="button"</code></td><td>não faz nada sozinho: só roda o seu <code>onClick</code></td><td>todo o resto: Cancelar, Mostrar senha, + Adicionar, abrir menu</td></tr>
+              <tr><td><code>type="reset"</code></td><td>volta os campos ao valor inicial</td><td>quase nunca: apagar o que a pessoa digitou costuma ser acidente</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="code-pair">
+          <div><p class="code-label">Bug clássico: o botão sem type envia</p>
+<pre class="code">&lt;form onSubmit={salvar}&gt;
+  &lt;input type="password" /&gt;
+  &lt;button onClick={alternarSenha}&gt;👁&lt;/button&gt;  <span class="no">// envia o form!</span>
+  &lt;button onClick={salvar}&gt;Salvar&lt;/button&gt;    <span class="no">// Enter não passa aqui</span>
+&lt;/form&gt;</pre></div>
+          <div><p class="code-label">Certo: um envio, tratado no form</p>
+<pre class="code">&lt;form onSubmit={(e) =&gt; { e.preventDefault(); salvar(new FormData(e.currentTarget)) }}&gt;
+  &lt;input type="password" name="senha" required /&gt;
+  &lt;button type="button" onClick={alternarSenha}&gt;👁&lt;/button&gt;  <span class="ok">// não envia</span>
+  &lt;button type="submit"&gt;Salvar&lt;/button&gt;  <span class="ok">// clique e Enter</span>
+&lt;/form&gt;</pre></div>
+        </div>
+        <p class="tradeoff-q">Fora de um <code>&lt;form&gt;</code>, o <code>type</code> não muda nada. Com dois botões de envio, <code>e.nativeEvent.submitter</code> (no React) ou <code>e.submitter</code> diz qual foi clicado, e o <code>name</code>/<code>value</code> dele vai junto nos dados. Com o botão de envio <code>disabled</code>, o <kbd>Enter</kbd> também deixa de enviar.</p>
+      </div>
       <p class="takeaway"><b>Leitura de sênior.</b> Se você está escrevendo <code>role="button"</code> e <code>tabIndex</code>, pare e troque por <code>&lt;button&gt;</code>. O mesmo vale para link: se a ação muda a URL, use <code>&lt;a href&gt;</code>. Assim a pessoa consegue abrir em nova aba e o botão voltar funciona.</p>
     </section>
 
@@ -421,6 +471,40 @@ Lab.decision($('#decidir'), {
 <script>
 /* Além da acessibilidade: o "link" feito com div só navega por script */
 Lab.$('#fake-link').addEventListener('click', () => { location.hash = 'contraste'; });
+</script>
+<script>
+/* type do botão: o formulário registra cada envio em vez de recarregar a página */
+(() => {
+  const form = Lab.$('#sub-form'), log = Lab.$('#sub-log'), validate = Lab.$('#sub-validate'), email = Lab.$('#sub-email');
+  let lastKey = 0, lastClick = { btn: null, at: 0 };
+  const add = (text, tone) => {
+    const li = document.createElement('li');
+    li.className = 'new';
+    if (tone) li.style.color = 'var(--' + tone + ')';
+    li.textContent = text;
+    log.prepend(li);
+    while (log.children.length > 8) log.lastChild.remove();
+  };
+  const label = (btn) => '"' + btn.firstChild.textContent.trim() + '"';
+  const recent = (t) => performance.now() - t < 400;
+  form.addEventListener('keydown', (e) => { if (e.key === 'Enter') lastKey = performance.now(); });
+  form.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) lastClick = { btn: b, at: performance.now() }; });
+  validate.addEventListener('change', () => { form.noValidate = !validate.checked; });
+  Lab.$('#sub-button').addEventListener('click', () => add('"Mostrar ajuda" (type="button") só rodou o onClick. Nada foi enviado.', 'good'));
+  // a validação nativa roda antes do submit: se falhar, o submit nem acontece
+  email.addEventListener('invalid', () => {
+    const who = recent(lastKey) ? 'Enter no campo' : (recent(lastClick.at) ? label(lastClick.btn) : '?');
+    add('{who} tentou enviar, e a validação nativa bloqueou: {msg}'.replace('{who}', who).replace('{msg}', email.validationMessage), 'warn');
+  });
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const by = e.submitter, viaEnter = recent(lastKey);
+    if (by && by.id === 'sub-none') { add(viaEnter ? 'Enter no campo acionou o primeiro botão de envio do formulário: "Mostrar ajuda" (sem type). O formulário foi enviado pelo botão errado.' : '"Mostrar ajuda" (sem type) enviou o formulário sem querer', 'bad'); return; }
+    const data = new FormData(form, by);
+    const who = (viaEnter ? 'Enter no campo' : label(by)) + (form.noValidate || by.formNoValidate ? ' (sem validar)' : '');
+    add('submit disparado por {who} · acao={acao} · email="{email}"'.replace('{who}', who).replace('{acao}', data.get('acao')).replace('{email}', data.get('email')), 'good');
+  });
+})();
 </script>
 </body>
 </html>
