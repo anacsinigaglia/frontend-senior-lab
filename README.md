@@ -1,81 +1,85 @@
-# Lab Frontend Sênior
+# Senior Frontend Lab
 
-Laboratório de estudo interativo sobre como um frontend sênior pensa. São seis módulos, um por assunto. Em cada um você provoca o problema em experimentos que rodam de verdade no navegador, lê o código por trás (a versão com problema ao lado da versão que funciona), fecha com uma "Leitura de sênior" e termina num roteiro de perguntas ("Como decidir") que leva a uma recomendação para o seu caso.
+**English** · [Português](README.pt-BR.md)
 
-HTML, CSS e JavaScript puros: sem build e sem dependências (só as fontes do Google Fonts).
+An interactive study lab about how a senior frontend engineer thinks. There are six modules, one per topic. In each one you trigger the problem in experiments that really run in the browser, read the code behind it (the broken version next to the working one), get a "Senior take" and finish with a set of questions ("How to decide") that leads to a recommendation for your case.
 
-Acesse em: https://anacsinigaglia.github.io/frontend-senior-lab/
+Plain HTML, CSS and JavaScript: no build step and no dependencies (only the Google Fonts).
 
-Versão em inglês: https://anacsinigaglia.github.io/frontend-senior-lab/en/ (o botão **PT | EN** na barra do topo troca o idioma da página atual).
+Open it at: https://anacsinigaglia.github.io/frontend-senior-lab/en/
 
-## Módulos
+Portuguese version: https://anacsinigaglia.github.io/frontend-senior-lab/ (the **PT | EN** switch in the top bar changes the language of the current page).
 
-| Módulo | O que você manipula | Decisão |
+## Modules
+
+| Module | What you play with | Decision |
 | --- | --- | --- |
-| [Performance](performance.html) | Debounce numa busca de clientes; tabela de 50 mil linhas com e sem virtualização; layout thrashing medido em ms | Vale a pena otimizar isso? |
-| [Segurança](seguranca.html) | Um comentário com XSS que lê o token; token em localStorage, memória ou cookie httpOnly; links com `javascript:` disfarçado | Onde guardo a autenticação? |
-| [Semântica e a11y](semantica.html) | Div com cara de botão contra `<button>` no teclado; o que o leitor de tela anuncia; contraste pela regra da WCAG | Qual elemento eu uso? |
-| [Arquitetura e estado](arquitetura.html) | Prop drilling, Context ou store: quem renderiza de novo; cache de servidor entre duas telas e invalidação depois de uma venda | Onde esse estado deve morar? |
-| [Qualidade e testes](qualidade.html) | Três booleanos contra um status; testes que quebram na refatoração e testes que deixam o bug passar | Que teste escrevo para isso? |
-| [Decisões técnicas](decisoes.html) | Matriz de trade-offs com pesos (Context, Zustand ou Redux Toolkit); gerador de ADR em Markdown; classificar comentários de code review | Essa decisão precisa de um ADR? |
+| [Performance](en/performance.html) | Core Web Vitals (LCP, INP, CLS) measured live; debounce on a customer search; a 50,000-row table with and without virtualization; layout thrashing measured in ms | Is this worth optimizing? |
+| [Security](en/seguranca.html) | An XSS comment that reads the token; token in localStorage, memory or an httpOnly cookie; links with a disguised `javascript:` | Where do I store authentication? |
+| [Semantics & a11y](en/semantica.html) | A div styled as a button versus a `<button>` on the keyboard; what the screen reader announces; contrast by the WCAG rule | Which element do I use? |
+| [Architecture & state](en/arquitetura.html) | Prop drilling, Context or a store: what re-renders; server cache shared by two screens and invalidation after a sale | Where should this state live? |
+| [Quality & testing](en/qualidade.html) | Three booleans versus one status; tests that break on refactoring and tests that let the bug through | Which test do I write for this? |
+| [Technical decisions](en/decisoes.html) | Weighted trade-off matrix (Context, Zustand or Redux Toolkit); Markdown ADR generator; classifying code review comments | Does this decision need an ADR? |
 
-## Como rodar localmente
+## Running locally
 
-Abra o `index.html` direto no navegador, ou sirva a pasta com um servidor estático:
+Open `index.html` (Portuguese) or `en/index.html` (English) directly in the browser, or serve the folder with a static server:
 
 ```sh
 npx serve .
-# ou
+# or
 python3 -m http.server
 ```
 
-## Estrutura
+## Structure
 
-| Arquivo | O que faz |
+| File | What it does |
 | --- | --- |
-| `index.html` | Página inicial com os cards dos módulos. Marca como "visitado" os módulos já abertos (lidos do localStorage). |
-| `lab.css` | Estilos compartilhados: barra de módulos, bancadas de experimento, blocos de código, painel de decisão e paginação. |
-| `lab.js` | Script compartilhado. Expõe `window.Lab` e, ao carregar, lê `data-module` do `<body>` para montar a navegação e marcar o módulo como visitado. |
-| `<módulo>.html` | Uma página por módulo, com os experimentos e o roteiro de decisão em um `<script>` próprio no fim da página. |
-| `en/` | A versão em inglês: as mesmas páginas, com os mesmos nomes de arquivo, `<html lang="en">` e `lab.css`/`lab.js` carregados de `../`. |
+| `index.html` | Home page with the module cards. Marks modules you have already opened as "visited" (read from localStorage). |
+| `lab.css` | Shared styles: module bar, experiment benches, code blocks, decision panel and pagination. |
+| `lab.js` | Shared script. Exposes `window.Lab` and, on load, reads `data-module` from `<body>` to build the navigation and mark the module as visited. |
+| `<module>.html` | One page per module, with the experiments and the decision questions in its own `<script>` at the end of the page. |
+| `en/` | The English version: the same pages with the same file names, `<html lang="en">`, and `lab.css`/`lab.js` loaded from `../`. |
 
-O objeto `window.Lab` contém:
+File names stay in Portuguese in both versions (`seguranca.html`, `decisoes.html`…), so the language switch only has to swap the folder.
 
-- `LANG`: `'en'` quando o `<html lang>` da página começa com `en`, senão `'pt'`. Define o idioma dos textos compartilhados (navegação, paginação, painel "Como decidir" e botão de copiar).
-- `MODULES`: lista ordenada dos módulos (`slug`, `short` em português e `en` em inglês), usada na navegação e na paginação.
-- `renderNav(slug)`: preenche `#modnav` (barra do topo) e `#pager` (anterior/próximo).
-- Ao carregar, o `lab.js` também adiciona o botão **PT | EN** no fim da barra do topo, apontando para o mesmo arquivo na outra pasta (`en/<arquivo>` ou `../<arquivo>`) e mantendo o `#hash`.
-- `decision(root, cfg)`: monta o painel "Como decidir" dentro de `root`.
-- `markVisited(slug)` e `store(key, value?)`: leitura e escrita em JSON no localStorage (`store` sem valor lê).
-- `copyText(text, btn)`: copia para a área de transferência e dá retorno no botão.
-- `$`, `$$` e `esc`: atalhos de `querySelector`, `querySelectorAll` e escape de HTML.
+`window.Lab` contains:
 
-## Como adicionar um módulo
+- `LANG`: `'en'` when the page's `<html lang>` starts with `en`, otherwise `'pt'`. It sets the language of the shared text (navigation, pagination, the "How to decide" panel and the copy button).
+- `MODULES`: ordered list of modules (`slug`, `short` in Portuguese and `en` in English), used by the navigation and pagination.
+- `renderNav(slug)`: fills `#modnav` (top bar) and `#pager` (previous/next).
+- On load, `lab.js` also adds the **PT | EN** switch at the end of the top bar. It points to the same file in the other folder (`en/<file>` or `../<file>`) and keeps the `#hash`.
+- `decision(root, cfg)`: builds the "How to decide" panel inside `root`.
+- `markVisited(slug)` and `store(key, value?)`: JSON read and write in localStorage (`store` without a value reads).
+- `copyText(text, btn)`: copies to the clipboard and gives feedback on the button.
+- `$`, `$$` and `esc`: shortcuts for `querySelector`, `querySelectorAll` and HTML escaping.
 
-1. Crie `novo.html` copiando a estrutura de uma página existente: `<body data-module="novo">`, `<nav id="modnav">` no topo, `<section id="decidir">` no fim do conteúdo e `<nav id="pager">` depois dele. Carregue `lab.css` e `lab.js`.
-2. Adicione `{ slug: 'novo', short: 'Nome curto', en: 'Short name' }` em `MODULES`, no `lab.js`, na posição em que ele deve aparecer na navegação.
-3. Adicione um card `<a class="mod" href="novo.html" data-slug="novo">` no `index.html`, com o selo `.pill` de "visitado".
-4. Crie também `en/novo.html`, a mesma página traduzida, com `<html lang="en">` e `../lab.css`/`../lab.js`, e adicione o card em `en/index.html`.
-5. No script da página, chame `Lab.decision`:
+## Adding a module
+
+1. Create `novo.html` by copying the structure of an existing page: `<body data-module="novo">`, `<nav id="modnav">` at the top, `<section id="decidir">` at the end of the content and `<nav id="pager">` after it. Load `lab.css` and `lab.js`.
+2. Add `{ slug: 'novo', short: 'Nome curto', en: 'Short name' }` to `MODULES` in `lab.js`, at the position where it should appear in the navigation.
+3. Add a card `<a class="mod" href="novo.html" data-slug="novo">` to `index.html`, with the "visited" `.pill` badge.
+4. Also create `en/novo.html`, the same page translated, with `<html lang="en">` and `../lab.css`/`../lab.js`, and add the card to `en/index.html`.
+5. In the page's script, call `Lab.decision`:
 
 ```js
 Lab.decision(Lab.$('#decidir'), {
-  title: 'Pergunta da decisão?',
-  intro: 'Opcional.',
+  title: 'Decision question?',
+  intro: 'Optional.',
   questions: [
-    { id: 'a', text: 'Primeira pergunta?', hint: 'Opcional.',
-      options: [{ v: 'sim', label: 'Sim' }, { v: 'nao', label: 'Não' }] },
-    { id: 'b', text: 'Só aparece se a = sim', when: (r) => r.a === 'sim',
+    { id: 'a', text: 'First question?', hint: 'Optional.',
+      options: [{ v: 'sim', label: 'Yes' }, { v: 'nao', label: 'No' }] },
+    { id: 'b', text: 'Only shows when a = sim', when: (r) => r.a === 'sim',
       options: [{ v: 'x', label: 'X' }, { v: 'y', label: 'Y' }] },
   ],
   decide(r) {
-    return { tone: 'warn', title: 'Recomendação', body: '<p>Justificativa.</p>', code: 'opcional' };
+    return { tone: 'warn', title: 'Recommendation', body: '<p>Reasoning.</p>', code: 'optional' };
   },
 });
 ```
 
-`when` recebe as respostas das perguntas anteriores e esconde a pergunta quando devolve falso. `decide` só é chamada quando todas as perguntas visíveis têm resposta. `tone` é `'good'` (padrão) ou `'warn'`. `title` e `code` são texto (o HTML é escapado); `body` é inserido como HTML.
+`when` receives the answers to the previous questions and hides the question when it returns false. `decide` is only called when every visible question has an answer. `tone` is `'good'` (default) or `'warn'`. `title` and `code` are text (the HTML is escaped); `body` is inserted as HTML.
 
-## Sobre o experimento de XSS
+## About the XSS experiment
 
-O módulo de Segurança executa de propósito um handler injetado de verdade: no modo `innerHTML`, o `onerror` do comentário malicioso roda no seu navegador e chama uma função da própria página que mostra o alerta. O token gravado em `localStorage` (`access_token`) é falso, criado só para a demonstração, e nada é enviado para fora da página.
+The Security module deliberately runs a real injected handler: in `innerHTML` mode, the malicious comment's `onerror` runs in your browser and calls a function on the page itself that shows the alert. The token stored in `localStorage` (`access_token`) is fake, created only for the demo, and nothing is sent outside the page.
