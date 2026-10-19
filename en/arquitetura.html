@@ -28,6 +28,15 @@
   .skel { height: 26px; border-radius: 6px; background: linear-gradient(90deg, var(--line), var(--surface), var(--line)); background-size: 200% 100%; animation: sk 1.1s linear infinite; }
   @keyframes sk { to { background-position: -200% 0; } }
   .status-line { font: 12px var(--f-mono); color: var(--muted); min-height: 18px; }
+  .dv-twin { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 780px) { .dv-twin { grid-template-columns: minmax(0, 1fr); } }
+  .dv-panel { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+  .dv-rows { display: grid; gap: 4px; min-height: 120px; align-content: start; }
+  .dv-row { display: flex; justify-content: space-between; gap: 8px; padding: 6px 10px; border-radius: 6px; background: var(--surface); border: 1px solid var(--line); font: 13px var(--f-mono); }
+  .dv-row span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .dv-total { font: 700 22px/1.1 var(--f-display); font-variant-numeric: tabular-nums; }
+  .dv-state { margin: 0; font: 12px/1.5 var(--f-mono); color: var(--muted); }
+  .dv-panel .pill { justify-self: start; white-space: normal; }
 </style>
 </head>
 <body data-module="arquitetura">
@@ -89,6 +98,53 @@ const { user } = useContext(AppCtx)   <span class="no">// UserBadge renders when
 const useApp = create(set =&gt; ({ theme: 'light', user: 'Ana', toggleTheme: () =&gt; set(...) }))
 const user = useApp(s =&gt; s.user)   <span class="ok">// ignores theme changes</span></pre>
       </details>
+      <div class="tradeoff" id="store-seletor">
+        <h3>What a store with selectors is</h3>
+        <p class="tradeoff-q">A <b>store</b> is a state object that lives <b>outside the React tree</b>, along with the functions that change it. Any component reads from it with no Provider and no prop passing. The <b>selector</b> is the function each component passes to say which piece it wants: <code>(s) =&gt; s.user</code>. When the store changes, the library runs each component's selector and compares the result with the previous one (<code>Object.is</code>). <b>Only components whose piece changed re-render.</b> In the "Store with selector" mode above, changing the theme doesn't wake up <code>UserBadge</code>.</p>
+        <div class="code-pair">
+          <div><p class="code-label">Create the store (Zustand v5)</p>
+<pre class="code">import { create } from 'zustand'
+
+const useApp = create((set) =&gt; ({
+  theme: 'light',
+  user: 'Ana',
+  toggleTheme: () =&gt; set((s) =&gt; ({
+    theme: s.theme === 'light' ? 'dark' : 'light',
+  })),
+}))</pre></div>
+          <div><p class="code-label">Read with a selector</p>
+<pre class="code"><span class="ok">// only re-renders when user changes</span>
+const user = useApp((s) =&gt; s.user)
+const toggleTheme = useApp((s) =&gt; s.toggleTheme)
+
+<span class="no">// no selector: re-renders on every store change</span>
+const everything = useApp()
+
+<span class="ok">// several fields at once: useShallow</span>
+import { useShallow } from 'zustand/react/shallow'
+const { theme, user } = useApp(
+  useShallow((s) =&gt; ({ theme: s.theme, user: s.user })),
+)</pre></div>
+        </div>
+        <div class="tradeoff-grid four">
+          <div class="tcard">
+            <h3>Context vs. store</h3>
+            <p>Context notifies <b>every</b> consumer when its <code>value</code> changes, even those reading a field that didn't change. A store with selectors only notifies whoever reads the field that changed.</p>
+          </div>
+          <div class="tcard">
+            <h3>Gotcha: a selector that builds an object</h3>
+            <p><code>useApp((s) =&gt; ({ a: s.a, b: s.b }))</code> returns a new object every time. To the comparison it "always changed": it re-renders for nothing and, in Zustand v5, can loop forever. Use <code>useShallow</code> or one selector per field.</p>
+          </div>
+          <div class="tcard">
+            <h3>Selectors derive too</h3>
+            <p><code>useApp((s) =&gt; s.contracts.length)</code> only re-renders when the count changes, not on every contract edit. It's the derived state from the experiment below, computed at read time.</p>
+          </div>
+          <div class="tcard combo">
+            <h3>When it pays off</h3>
+            <p>Client state read in many distant places that changes often: a cart, live quotes, an editor. API data belongs in React Query, not in the store. Theme and the logged-in user fit in Context.</p>
+          </div>
+        </div>
+      </div>
       <p class="takeaway"><b>Senior take.</b> Passing a prop through two or three layers is normal and easy to trace. Context works well for values that rarely change (theme, user, language). A store with selectors pays off when many components read different parts of state that changes often.</p>
     </section>
 
@@ -149,6 +205,130 @@ useEffect(() =&gt; {
 queryClient.invalidateQueries({ queryKey: ['clients'] })  <span class="ok">// both screens update</span></pre></div>
       </div>
       <p class="takeaway"><b>Senior take.</b> Server data isn't application state. It's a copy that may be stale. A caching library handles deduplication, revalidation, cancellation and retry. Copying the response into Redux or Context is rebuilding that library, with bugs.</p>
+    </section>
+
+    <section class="lab" id="derivado">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Derived state</p>
+        <h2>The total that goes stale</h2>
+        <p>If a value can be computed from other state or from a prop, it isn't state: it's <b>derived</b>. Keeping both in <code>useState</code> creates two sources of truth, and every change has to remember to update both. The buttons below change both panels at once: on the left, three pieces of state kept in sync by hand; on the right, one piece of state and the rest computed during render.</p>
+      </div>
+      <div class="controls">
+        <div class="row">
+          <button type="button" class="btn" id="dv-add">+ Add contract</button>
+          <button type="button" class="btn" id="dv-edit">+100 bags on the first one</button>
+          <button type="button" class="btn" id="dv-remove">Remove the last one</button>
+          <button type="button" class="btn ghost" id="dv-reset">Start over</button>
+        </div>
+        <div class="field">
+          <span class="field-label">Grain filter</span>
+          <div class="seg" role="radiogroup" aria-label="Grain filter">
+            <label><input type="radio" name="dv-grao" value="todos" checked><span>All</span></label>
+            <label><input type="radio" name="dv-grao" value="soja"><span>Soybeans only</span></label>
+            <label><input type="radio" name="dv-grao" value="milho"><span>Corn only</span></label>
+          </div>
+        </div>
+      </div>
+      <div class="dv-twin">
+        <div class="dv-panel">
+          <p class="code-label">Duplicated state: contracts + filtered + total</p>
+          <div class="dv-rows" id="dv-dup-rows"></div>
+          <div class="dv-total" id="dv-dup-total"></div>
+          <span class="pill" id="dv-dup-badge"></span>
+          <p class="dv-state" id="dv-dup-state"></p>
+        </div>
+        <div class="dv-panel">
+          <p class="code-label">Derived: contracts + filter, the rest computed</p>
+          <div class="dv-rows" id="dv-der-rows"></div>
+          <div class="dv-total" id="dv-der-total"></div>
+          <span class="pill good">Always in sync: computed on every render</span>
+          <p class="dv-state" id="dv-der-state"></p>
+        </div>
+      </div>
+      <p class="hint">Try it: click "+100 bags on the first one" and watch the total on the left stay the same. Then change the filter: it "fixes" everything, because the filter handler recalculates. The bug only shows up when someone forgets a <code>set</code>, which is why it passes a quick test.</p>
+      <div class="code-pair">
+        <div><p class="code-label">Three pieces of state to keep in sync</p>
+<pre class="code">const [contracts, setContracts] = useState(initial)
+const [filtered, setFiltered] = useState(initial)
+const [total, setTotal] = useState(sum(initial))
+
+function add(c) {
+  setContracts([...contracts, c])
+  setTotal(total + c.bags)    <span class="no">// ignores the filter</span>
+}                             <span class="no">// forgot setFiltered</span>
+function edit(id, bags) {
+  setContracts(contracts.map(...))  <span class="no">// forgot setTotal</span>
+}</pre></div>
+        <div><p class="code-label">One piece of state; the rest is math</p>
+<pre class="code">const [contracts, setContracts] = useState(initial)
+const [grain, setGrain] = useState('all')
+
+<span class="ok">// recomputed on every render: it can't go stale</span>
+const filtered = grain === 'all'
+  ? contracts
+  : contracts.filter((c) =&gt; c.grain === grain)
+const total = filtered.reduce((s, c) =&gt; s + c.bags, 0)
+
+<span class="c">// is the math expensive? (thousands of items, measured in the Profiler)</span>
+<span class="c">// const filtered = useMemo(() =&gt; ..., [contracts, grain])</span></pre></div>
+      </div>
+
+      <div class="tradeoff">
+        <h3>The same trap with props: copying a prop into state</h3>
+        <p class="tradeoff-q"><code>useState(client.notes)</code> only reads the prop on the <b>first</b> render. When the parent switches clients, the title follows (it comes from the prop), but the field keeps the old text. Pick another client and compare.</p>
+        <div class="field">
+          <span class="field-label">Client selected in the parent</span>
+          <div class="seg" role="radiogroup" aria-label="Selected client">
+            <label><input type="radio" name="dv-cli" value="0" checked><span>João Produtor</span></label>
+            <label><input type="radio" name="dv-cli" value="1"><span>Maria Silva</span></label>
+            <label><input type="radio" name="dv-cli" value="2"><span>Agropecuária Serra Azul</span></label>
+          </div>
+        </div>
+        <div class="dv-twin">
+          <div class="dv-panel">
+            <p class="code-label">useState(client.notes)</p>
+            <label class="field"><span class="field-label" id="dv-copy-title"></span><input type="text" id="dv-copy"></label>
+            <span class="pill" id="dv-copy-badge"></span>
+          </div>
+          <div class="dv-panel">
+            <p class="code-label">&lt;Notes key={client.id} /&gt;</p>
+            <label class="field"><span class="field-label" id="dv-key-title"></span><input type="text" id="dv-key"></label>
+            <span class="pill good">Recreated when the client changes</span>
+          </div>
+        </div>
+        <div class="code-pair">
+          <div><p class="code-label">The prop only counts the first time</p>
+<pre class="code">function Notes({ client }) {
+  const [text, setText] = useState(client.notes)  <span class="no">// stuck</span>
+  return &lt;input value={text} onChange={...} /&gt;
+}</pre></div>
+          <div><p class="code-label">key tells React: "this is a different component"</p>
+<pre class="code">&lt;Notes key={client.id} client={client} /&gt;  <span class="ok">// state resets</span>
+
+<span class="c">// or make it clear it is only the initial value:</span>
+function Notes({ initialNotes }) { ... }</pre></div>
+        </div>
+      </div>
+
+      <div class="tradeoff-grid">
+        <div class="tcard">
+          <h3>Can you compute it? It isn't state</h3>
+          <p>Before adding a <code>useState</code>, ask whether the value comes from other state, a prop or the URL. Totals, filtered lists, counts, "is there an error?", "is everything checked?", a full name: all of these are math during render.</p>
+        </div>
+        <div class="tcard">
+          <h3>Syncing with useEffect is the same bug, slower</h3>
+          <p><code>useEffect(() =&gt; setTotal(sum(contracts)), [contracts])</code> renders twice: first with the stale total on screen, then corrected. Besides being slower, it scatters the logic. Compute it directly.</p>
+        </div>
+        <div class="tcard">
+          <h3>Store the id, not a copy of the object</h3>
+          <p><code>const [selected, setSelected] = useState(contract)</code> keeps a copy that never sees edits. Store <code>selectedId</code> and derive: <code>contracts.find((c) =&gt; c.id === selectedId)</code>.</p>
+        </div>
+        <div class="tcard combo">
+          <h3>Booleans that contradict each other</h3>
+          <p>Separate <code>isLoading</code>, <code>isError</code> and <code>data</code> can reach impossible combinations. Same problem: one <code>status</code>, with the rest derived from it. See the experiment in <a href="qualidade.html#estados">Quality &amp; testing</a>.</p>
+        </div>
+      </div>
+      <p class="takeaway"><b>Senior take.</b> State is the minimum you can't compute. Every extra <code>useState</code> is a source of truth someone has to remember to update. When two pieces of state must change together, one of them is usually derived from the other, and the bug shows up the day someone forgets a <code>set</code>.</p>
     </section>
 
     <section id="decidir"></section>
@@ -303,7 +483,9 @@ Lab.decision($('#decidir'), {
   title: 'Where should this state live?',
   intro: 'Think of a concrete piece of state you are creating right now, like the contract list, the crop season filter or an open modal.',
   questions: [
-    { id: 'origem', text: 'Where does this data come from?',
+    { id: 'derivado', text: 'Can this value be computed from other state, a prop or the URL?', hint: 'A total, a filtered list, a count, "is there an error?", the selected item from its id.',
+      options: [{ v: 'sim', label: 'Yes' }, { v: 'nao', label: 'No' }] },
+    { id: 'origem', when: (a) => a.derivado === 'nao', text: 'Where does this data come from?',
       options: [{ v: 'servidor', label: 'From the API' }, { v: 'escolha', label: 'From a choice on screen (filter, tab, page)' }, { v: 'ui', label: 'From the UI (open modal, hovered item)' }, { v: 'form', label: 'From a form being filled in' }] },
     { id: 'link', text: 'If you send the link to a colleague, should they see the screen with the same choice?', when: (a) => a.origem === 'escolha',
       options: [{ v: 'sim', label: 'Yes' }, { v: 'nao', label: 'No' }] },
@@ -313,6 +495,7 @@ Lab.decision($('#decidir'), {
       options: [{ v: 'pouco', label: 'Rarely (login, theme)' }, { v: 'muito', label: 'Several times per second or on every keystroke' }] },
   ],
   decide(a) {
+    if (a.derivado === 'sim') return { title: "It isn't state: compute it during render", body: '<p>A value that comes from other state is derived. Keeping it in useState creates a second source of truth that goes stale the day someone forgets to update it. Compute it directly in the component body; reach for useMemo only if the math is genuinely expensive.</p>', code: 'const filtered = contracts.filter((c) => c.grain === grain)\nconst total = filtered.reduce((s, c) => s + c.bags, 0)' };
     if (a.origem === 'servidor') return { title: 'React Query (or SWR)', body: '<p>It\'s a copy of the server, so treat it as a cache: key, stale time and invalidation after mutations. Don\'t copy it into useState or a global store.</p>', code: "useQuery({ queryKey: ['contracts', { season }], queryFn: () => api.contracts(season) })" };
     if (a.origem === 'form') return { title: 'Form state (React Hook Form + Zod)', body: '<p>A form has its own state: values, errors, touched fields and submission in progress. A form library avoids a re-render on every keystroke, and a Zod schema validates the same way on front and back end.</p>' };
     if (a.origem === 'escolha' && a.link === 'sim') return { title: 'In the URL, as search params', body: '<p>A filter in the URL survives reloads, can be shared and makes the back button work. The URL becomes the source of truth and the screen reads from it.</p>', code: "const [params, setParams] = useSearchParams()\nconst season = params.get('season') ?? '2025/26'" };
@@ -323,6 +506,101 @@ Lab.decision($('#decidir'), {
       : { tone: 'warn', title: 'Store with selectors (Zustand)', body: '<p>With Context, every change renders all consumers. A store with selectors renders only those that read the field that changed. First check whether this state really needs to be global.</p>', code: 'const quote = useMarket((s) => s.quotes[asset])' };
   },
 });
+</script>
+<script>
+/* Estado derivado: o painel da esquerda imita três useState mantidos à mão, com os esquecimentos típicos */
+(() => {
+  const { $, $$ } = Lab;
+  const J = {"sc": "bags", "all": "all", "badge_ok": "In sync, for now", "badge_bad": "Out of sync: shows {shown} bags, should be {real} bags", "badge_list": "Out of sync: the list doesn't match the contracts", "dup_state": "state: contracts ({n}) · filtered ({f}) · total ({t})", "der_state": "state: contracts ({n}) · grain \"{g}\" · derived during render: filtered, total", "obs_of": "Notes for {nome}", "copy_bad": "The field still belongs to {nome}", "copy_ok": "Hasn't switched clients yet"};
+  const CLIENTS = [["João Produtor", "Prefers contact via WhatsApp"], ["Maria Silva", "Deliveries on Mondays only"], ["Agropecuária Serra Azul", "Pays in two installments"]];
+  const fmt = (n) => n.toLocaleString('en-US');
+  const INIT = [
+    { id: 1, f: 'Fazenda Boa Vista', g: 'soja', s: 1200 },
+    { id: 2, f: 'Sítio Santa Rita', g: 'milho', s: 860 },
+    { id: 3, f: 'Fazenda Três Irmãos', g: 'soja', s: 2040 },
+  ];
+  const POOL = [
+    { f: 'Agropecuária Serra Azul', g: 'milho', s: 540 },
+    { f: 'Fazenda São Jorge', g: 'soja', s: 900 },
+    { f: 'Sítio Primavera', g: 'milho', s: 300 },
+    { f: 'Fazenda Santa Luzia', g: 'soja', s: 1500 },
+  ];
+  const GRAIN = { soja: 'soybeans', milho: 'corn' };
+  const filterBy = (list, g) => (g === 'todos' ? list : list.filter((c) => c.g === g));
+  const sum = (list) => list.reduce((t, c) => t + c.s, 0);
+  let next, contratos, grao, dup;
+  function reset() {
+    next = 0;
+    contratos = INIT.map((c) => ({ ...c }));
+    grao = 'todos';
+    dup = { contratos: INIT.map((c) => ({ ...c })), filtrados: INIT.map((c) => ({ ...c })), total: sum(INIT), grao: 'todos' };
+    $('input[name=dv-grao][value=todos]').checked = true;
+    render();
+  }
+  const rows = (list) => list.map((c) => `<div class="dv-row"><span>${c.f} · ${GRAIN[c.g]}</span><span>${fmt(c.s)} ${J.sc}</span></div>`).join('');
+  function render() {
+    const filtrados = filterBy(contratos, grao), total = sum(filtrados);
+    $('#dv-der-rows').innerHTML = rows(filtrados);
+    $('#dv-der-total').textContent = `Total: ${fmt(total)} ${J.sc}`;
+    $('#dv-der-state').textContent = J.der_state.replace('{n}', contratos.length).replace('{g}', grao === 'todos' ? J.all : GRAIN[grao]);
+    $('#dv-dup-rows').innerHTML = rows(dup.filtrados);
+    $('#dv-dup-total').textContent = `Total: ${fmt(dup.total)} ${J.sc}`;
+    $('#dv-dup-state').textContent = J.dup_state.replace('{n}', dup.contratos.length).replace('{f}', dup.filtrados.length).replace('{t}', fmt(dup.total));
+    const sameList = JSON.stringify(dup.filtrados) === JSON.stringify(filtrados);
+    const badge = $('#dv-dup-badge');
+    if (dup.total !== total) { badge.className = 'pill bad'; badge.textContent = J.badge_bad.replace('{shown}', fmt(dup.total)).replace('{real}', fmt(total)); }
+    else if (!sameList) { badge.className = 'pill bad'; badge.textContent = J.badge_list; }
+    else { badge.className = 'pill warn'; badge.textContent = J.badge_ok; }
+  }
+  $('#dv-add').addEventListener('click', () => {
+    const base = POOL[next % POOL.length], c = { id: 100 + next, ...base };
+    next++;
+    contratos = [...contratos, c];
+    dup.contratos = [...dup.contratos, { ...c }];
+    dup.total = dup.total + c.s;              // lembrou do total, mas ignora o filtro
+    render();                                  // e esqueceu setFiltrados
+  });
+  $('#dv-edit').addEventListener('click', () => {
+    if (!contratos.length) return;
+    const id = contratos[0].id;
+    contratos = contratos.map((c) => (c.id === id ? { ...c, s: c.s + 100 } : c));
+    dup.contratos = dup.contratos.map((c) => (c.id === id ? { ...c, s: c.s + 100 } : c));
+    render();                                  // esqueceu setTotal e setFiltrados
+  });
+  $('#dv-remove').addEventListener('click', () => {
+    if (!contratos.length) return;
+    contratos = contratos.slice(0, -1);
+    const gone = dup.contratos[dup.contratos.length - 1];
+    dup.contratos = dup.contratos.slice(0, -1);
+    if (filterBy([gone], dup.grao).length) dup.total -= gone.s;   // lembrou do total
+    render();                                                      // esqueceu setFiltrados
+  });
+  $$('input[name=dv-grao]').forEach((r) => r.addEventListener('change', () => {
+    grao = r.value;
+    dup.grao = r.value;                        // o handler do filtro recalcula tudo,
+    dup.filtrados = filterBy(dup.contratos, r.value).map((c) => ({ ...c }));
+    dup.total = sum(dup.filtrados);            // por isso o bug "some" ao filtrar
+    render();
+  }));
+  $('#dv-reset').addEventListener('click', reset);
+  reset();
+
+  // Prop copiada para o estado
+  const copy = $('#dv-copy'), keyed = $('#dv-key');
+  let first = 0;
+  copy.value = CLIENTS[0][1];
+  function selectClient(i) {
+    const [nome, obs] = CLIENTS[i];
+    $('#dv-copy-title').textContent = J.obs_of.replace('{nome}', nome);
+    $('#dv-key-title').textContent = J.obs_of.replace('{nome}', nome);
+    keyed.value = obs;                         // key nova: componente novo, estado novo
+    const badge = $('#dv-copy-badge');         // o da esquerda não muda: useState já leu a prop
+    if (i === first) { badge.className = 'pill warn'; badge.textContent = J.copy_ok; }
+    else { badge.className = 'pill bad'; badge.textContent = J.copy_bad.replace('{nome}', CLIENTS[first][0]); }
+  }
+  $$('input[name=dv-cli]').forEach((r) => r.addEventListener('change', () => selectClient(+r.value)));
+  selectClient(0);
+})();
 </script>
 </body>
 </html>
