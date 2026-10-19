@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Performance · Senior Frontend Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="../lab.css">
+<style>
+  #list-box { height: 288px; overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; position: relative; }
+  .vrow { height: 32px; line-height: 32px; padding: 0 12px; border-bottom: 1px solid var(--line); font: 13px/32px var(--f-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #thr-area { display: flex; flex-wrap: wrap; gap: 2px; max-height: 120px; overflow: hidden; }
+  .tbox { height: 8px; background: var(--accent); opacity: 0.55; border-radius: 2px; }
+  .tradeoff { display: grid; gap: 14px; }
+  .tradeoff-q { margin: 0; max-width: 72ch; color: var(--muted); }
+  .tradeoff-q b { color: var(--ink); }
+  .tradeoff-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .tcard { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+  .tcard h3 { font-size: 16px; }
+  .tcard p { margin: 0; font-size: 14px; color: var(--muted); }
+  .tcard ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
+  .tcard li b { font-weight: 600; }
+  .tcard.combo { border-color: var(--accent); }
+  .stat .pill { justify-self: start; }
+  .cwv-group { display: grid; gap: 10px; padding-top: 12px; border-top: 1px dashed var(--line); }
+  .cwv-group:first-child { padding-top: 0; border-top: 0; }
+  .cwv-group h3 { font-size: 16px; }
+  #cwv-slot:empty { display: none; }
+  #cwv-slot.reserved { min-height: 180px; border-radius: 8px; background: var(--paper); display: block; }
+  .cwv-banner { height: 180px; box-sizing: border-box; padding: 12px 14px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); font-size: 14px; display: grid; align-content: center; gap: 2px; }
+  .cwv-banner b { font-family: var(--f-display); font-size: 15px; }
+  #cwv-status { font: 600 13px var(--f-mono); color: var(--muted); }
+</style>
+</head>
+<body data-module="performance">
+<header class="topbar"><div class="wrap"><a class="brand" href="index.html"><span class="brand-mark">FS</span>Senior Frontend Lab</a><nav class="modnav" id="modnav" aria-label="Modules"></nav></div></header>
+
+<div class="wrap">
+  <header class="page-head">
+    <p class="eyebrow">Module · Performance</p>
+    <h1>Measure before you optimize</h1>
+    <p class="lede">Optimizing without measuring only makes the code more complex. Here you measure the scores Google gives the page, trigger classic problems, watch the number change and learn which tool fixes each one.</p>
+    <ul class="senior">
+      <li><b>Starts from the symptom</b>Asks what is slow, and for whom, before writing a useMemo.</li>
+      <li><b>Knows where the time goes</b>Tells network, JavaScript, layout and paint apart in the Performance panel.</li>
+      <li><b>Picks the cheapest tool</b>Debounce and pagination solve more cases than new libraries.</li>
+    </ul>
+  </header>
+
+  <main>
+    <section class="lab" id="vitals">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Core Web Vitals</p>
+        <h2>The three scores Google gives your page</h2>
+        <p>Core Web Vitals are three real-experience metrics: how long the main content takes to appear, how long the screen takes to respond, and how much the layout jumps. The numbers below are measured live on this page, with the same API the <code>web-vitals</code> library uses. Trigger a slow interaction and a jumping layout, and watch the score change.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="grid">
+          <thead><tr><th>Metric</th><th>What it measures</th><th>Good</th><th>Poor</th><th>What usually hurts it</th></tr></thead>
+          <tbody>
+            <tr><td><b>LCP</b><br><small>Largest Contentful Paint</small></td><td>When the largest visible element (image, heading, text block) finishes rendering</td><td><span class="pill good">≤ 2.5 s</span></td><td><span class="pill bad">&gt; 4 s</span></td><td>Slow server, heavy hero image or one with <code>loading="lazy"</code>, render-blocking CSS and JS, content that only appears after a client-side fetch</td></tr>
+            <tr><td><b>INP</b><br><small>Interaction to Next Paint</small></td><td>From the interaction (click, tap, key press) until the screen shows the response. It is the worst interaction of the visit, almost always</td><td><span class="pill good">≤ 200 ms</span></td><td><span class="pill bad">&gt; 500 ms</span></td><td>A handler doing heavy work before painting, re-rendering a large tree, long third-party tasks (analytics, chat)</td></tr>
+            <tr><td><b>CLS</b><br><small>Cumulative Layout Shift</small></td><td>How much visible content moves without the user asking for it</td><td><span class="pill good">≤ 0.1</span></td><td><span class="pill bad">&gt; 0.25</span></td><td>Images without <code>width</code>/<code>height</code>, a notice or ad inserted above the content, a font that changes size, a skeleton with a different height than the content</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="cwv-slot" aria-live="polite"></div>
+      <div class="playground">
+        <div class="controls">
+          <div class="cwv-group">
+            <h3>INP: a click that freezes</h3>
+            <div class="field">
+              <label for="inp-ms">Work on click <output id="inp-ms-out" for="inp-ms">300 ms</output></label>
+              <input id="inp-ms" type="range" min="0" max="800" step="50" value="300">
+            </div>
+            <div class="field">
+              <span class="field-label">Handler</span>
+              <div class="seg" role="radiogroup" aria-label="How the handler does the work">
+                <label><input type="radio" name="inp-mode" value="block" checked><span>Works before painting</span></label>
+                <label><input type="radio" name="inp-mode" value="yield"><span>Paints first, works after</span></label>
+              </div>
+            </div>
+            <button type="button" class="btn primary" id="inp-run" style="justify-self:start">Save contract</button>
+            <p class="hint" id="inp-feedback" aria-live="polite">Same work in both modes. Only when the screen gets the response changes.</p>
+          </div>
+          <div class="cwv-group">
+            <h3>CLS: a notice that arrives late</h3>
+            <div class="field">
+              <span class="field-label">Space for the notice</span>
+              <div class="seg" role="radiogroup" aria-label="Space for the notice">
+                <label><input type="radio" name="cls-mode" value="none" checked><span>No reserved space</span></label>
+                <label><input type="radio" name="cls-mode" value="reserved"><span>With reserved space</span></label>
+              </div>
+            </div>
+            <div class="row">
+              <button type="button" class="btn primary" id="cls-run">Simulate API response</button>
+              <button type="button" class="btn ghost" id="cls-reset">Clear</button>
+            </div>
+            <p class="hint" id="cls-feedback" aria-live="polite" style="min-height:3em">Pick a mode and simulate the response.</p>
+            <p class="hint">The notice arrives 1 s after the click, above the experiment, and pushes everything on screen down. Shifts within 500 ms of an interaction don't count, because the user expected a change. If CLS already starts above zero, that is a real case on this page: the Google font arrives after the text and changes the line sizes.</p>
+          </div>
+        </div>
+        <div class="output">
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="cwv-lcp">–</span><span class="stat-l">LCP of this page</span><span class="pill neutral" id="cwv-lcp-r">measuring</span></div>
+            <div class="stat"><span class="stat-n" id="cwv-inp">–</span><span class="stat-l">INP (worst interaction)</span><span class="pill neutral" id="cwv-inp-r">interact</span></div>
+            <div class="stat"><span class="stat-n" id="cwv-cls">0</span><span class="stat-l">Cumulative CLS</span><span class="pill neutral" id="cwv-cls-r">measuring</span></div>
+          </div>
+          <p class="hint" id="cwv-detail">LCP element: measuring…</p>
+          <p id="cwv-status">Last interaction: –</p>
+          <p id="cwv-shift" class="hint">No shifts yet.</p>
+          <p class="hint" id="cwv-support" hidden></p>
+        </div>
+      </div>
+      <details class="src">
+        <summary>See the code</summary>
+<pre class="code"><span class="c">// Measure in production (RUM): the web-vitals library sends the numbers from every real visit</span>
+import { onLCP, onINP, onCLS } from 'web-vitals'
+const send = (m) =&gt; navigator.sendBeacon('/analytics', JSON.stringify({ name: m.name, value: m.value, rating: m.rating }))
+onLCP(send); onINP(send); onCLS(send)
+
+<span class="c">// What it does under the hood: observes the browser's performance entries</span>
+new PerformanceObserver((list) =&gt; {
+  for (const e of list.getEntries()) if (e.interactionId) longestDuration = Math.max(longestDuration, e.duration)
+}).observe({ type: 'event', durationThreshold: 16, buffered: true })</pre>
+        <div class="code-pair" style="margin-top:10px">
+          <div><p class="code-label">Bad INP: works before painting</p>
+<pre class="code">button.onclick = () =&gt; {
+  recalculatePortfolio()             <span class="no">// 300 ms blocking the thread</span>
+  status.textContent = 'Saved'       <span class="no">// only paints after</span>
+}</pre></div>
+          <div><p class="code-label">Good INP: respond, yield the thread, then work</p>
+<pre class="code">button.onclick = async () =&gt; {
+  status.textContent = 'Saving…'     <span class="ok">// visible response right away</span>
+  await afterNextPaint()             <span class="ok">// rAF + setTimeout</span>
+  recalculatePortfolio()
+  status.textContent = 'Saved'
+}</pre></div>
+        </div>
+        <div class="code-pair" style="margin-top:10px">
+          <div><p class="code-label">Bad CLS: nothing holds the spot</p>
+<pre class="code">{notice &amp;&amp; &lt;Notice /&gt;}             <span class="no">// pushes the list down</span>
+&lt;img src="logo.png" /&gt;              <span class="no">// no dimensions</span></pre></div>
+          <div><p class="code-label">Good CLS: the space exists before the content</p>
+<pre class="code">&lt;div style={{ minHeight: 96 }}&gt;{notice &amp;&amp; &lt;Notice /&gt;}&lt;/div&gt;
+&lt;img src="logo.png" width="120" height="40" /&gt;
+.cover { aspect-ratio: 16 / 9 }</pre></div>
+        </div>
+      </details>
+      <p class="takeaway"><b>Senior take.</b> The score that counts is the field score: Google uses the 75th percentile of real Chrome visits (CrUX), not your laptop. Lighthouse measures LCP and CLS in the lab, but not INP, because it doesn't click anything: instead it shows TBT, which is only an approximation. For INP, use the DevTools Performance tab (which shows all three metrics live while you use the page) and <code>web-vitals</code> in production. The React Profiler measures none of the three: it comes in later, once the Performance tab has shown the time is spent in React.</p>
+    </section>
+
+    <section class="lab" id="debounce">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Debounce</p>
+        <h2>How many searches does each key press fire?</h2>
+        <p>A search field that calls the API on every key press overloads the server and makes results flicker. Type with and without debounce and compare the number of requests.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <label for="deb-input">Search client</label>
+            <input id="deb-input" type="text" placeholder="e.g. fazenda boa vista" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="deb-ms">Debounce wait <output id="deb-ms-out" for="deb-ms">no debounce</output></label>
+            <input id="deb-ms" type="range" min="0" max="800" step="50" value="0">
+          </div>
+          <p class="hint">Type the same phrase at 0 ms and then at 300 ms.</p>
+          <button type="button" class="btn ghost small" id="deb-reset" style="justify-self:start">Reset counters</button>
+        </div>
+        <div class="output">
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="deb-keys">0</span><span class="stat-l">key presses</span></div>
+            <div class="stat"><span class="stat-n" id="deb-calls">0</span><span class="stat-l">requests</span></div>
+            <div class="stat"><span class="stat-n" id="deb-saved">0%</span><span class="stat-l">avoided</span></div>
+          </div>
+          <ol class="log" id="deb-log" data-empty="Requests show up here."></ol>
+        </div>
+      </div>
+      <details class="src">
+        <summary>See the code</summary>
+<pre class="code"><span class="c">// Wait until the user stops typing for `ms` before calling fn</span>
+function debounce(fn, ms) {
+  let timer
+  return (...args) =&gt; {
+    clearTimeout(timer)                       <span class="c">// each key press cancels the previous one</span>
+    timer = setTimeout(() =&gt; fn(...args), ms)
+  }
+}
+
+<span class="c">// In React, the equivalent is debouncing the value:</span>
+const [search, setSearch] = useState('')
+const debouncedSearch = useDebouncedValue(search, 300)
+const { data } = useQuery({
+  queryKey: ['clients', debouncedSearch],
+  queryFn: () =&gt; api.clients(debouncedSearch),
+})</pre>
+      </details>
+      <p class="takeaway"><b>Senior take.</b> Debounce solves expensive calls fired by frequent events (search, resize, autosave). If the cost is rendering rather than hitting the network, prefer <code>useDeferredValue</code>, which keeps the field responsive without delaying what the user types.</p>
+    </section>
+
+    <section class="lab" id="lista">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Virtualization</p>
+        <h2>A table with 50 thousand rows</h2>
+        <p>The browser has to create, style and position every DOM element. Virtualizing means drawing only the visible rows. Increase the number of rows and compare the time and the element count.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <label for="list-n">Rows <output id="list-n-out" for="list-n">10,000 rows</output></label>
+            <input id="list-n" type="range" min="500" max="50000" step="500" value="10000">
+          </div>
+          <div class="field">
+            <span class="field-label">Strategy</span>
+            <div class="seg" role="radiogroup" aria-label="Rendering strategy">
+              <label><input type="radio" name="list-mode" value="all" checked><span>Render everything</span></label>
+              <label><input type="radio" name="list-mode" value="virtual"><span>Virtualize</span></label>
+            </div>
+          </div>
+          <button type="button" class="btn primary" id="list-run" style="justify-self:start">Render again</button>
+          <p class="hint">Scroll the list in both modes. In virtual mode, the element count stays small.</p>
+        </div>
+        <div class="output">
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="list-time">–</span><span class="stat-l">render + layout time</span></div>
+            <div class="stat"><span class="stat-n" id="list-nodes">–</span><span class="stat-l">DOM elements</span></div>
+          </div>
+          <div id="list-box" tabindex="0" aria-label="Contract list"></div>
+        </div>
+      </div>
+      <details class="src">
+        <summary>See the code</summary>
+<pre class="code"><span class="c">// Hand-rolled virtualization: only draw what fits in the window</span>
+const HEIGHT = 32
+const start = Math.floor(box.scrollTop / HEIGHT)
+const end = start + Math.ceil(box.clientHeight / HEIGHT)
+spacer.style.height = total * HEIGHT + 'px'      <span class="c">// keeps the real scrollbar</span>
+for (let i = start; i &lt; end; i++) drawRow(i, i * HEIGHT)
+
+<span class="c">// In practice: @tanstack/react-virtual</span>
+const v = useVirtualizer({ count: rows.length, getScrollElement: () =&gt; ref.current, estimateSize: () =&gt; 32 })
+v.getVirtualItems().map(item =&gt; &lt;Row key={item.key} style={{ transform: `translateY(${item.start}px)` }} /&gt;)</pre>
+      </details>
+      <div class="tradeoff">
+        <h3>Virtualize, paginate or filter on the server?</h3>
+        <p class="tradeoff-q">The three don't compete: they solve different bottlenecks. Virtualizing cuts the cost of <b>drawing</b> (the data is already in the browser, the DOM is what weighs). Paginating or filtering on the server cuts the cost of <b>fetching and transferring</b>. Ask: is it slow because the browser draws too much, or because too much data arrives?</p>
+        <div class="tradeoff-grid">
+          <div class="tcard">
+            <span class="pill good" style="justify-self:start">Virtualize</span>
+            <h3>When it wins</h3>
+            <ul>
+              <li><b>The volume is bounded and fits on the client:</b> thousands to tens of thousands of light rows, a few MB. E.g. an advisor's clients, a year's statement.</li>
+              <li><b>The user scans the list</b> rather than looking for one item: scrolls, compares neighboring rows, navigates by keyboard.</li>
+              <li><b>Sorting and filtering must be instant:</b> with everything in memory, no click becomes a request.</li>
+              <li><b>Data arrives as a stream:</b> logs, feeds, quotes, chat.</li>
+              <li><b>It must work offline</b> or on a bad network once loaded.</li>
+              <li><b>Rows have a predictable height.</b></li>
+            </ul>
+          </div>
+          <div class="tcard">
+            <span class="pill neutral" style="justify-self:start">Paginate / filter on the server</span>
+            <h3>When it wins</h3>
+            <ul>
+              <li><b>The volume is large or unbounded:</b> virtualizing won't save a 50 MB JSON.</li>
+              <li><b>The user looks for a specific item:</b> search and filters take them straight to it.</li>
+              <li><b>Permissions and security:</b> what they can't see shouldn't even reach the browser.</li>
+              <li><b>Totals and aggregates</b> must match the database, even while data changes.</li>
+              <li><b>Shareable URL or SEO:</b> <code>?page=3&amp;status=active</code>.</li>
+            </ul>
+          </div>
+          <div class="tcard">
+            <span class="pill warn" style="justify-self:start">Costs of virtualization</span>
+            <h3>What you pay</h3>
+            <ul>
+              <li>The browser's <kbd>Ctrl</kbd>+<kbd>F</kbd> can't find off-screen rows.</li>
+              <li>Screen readers don't know the list size without <code>aria-rowcount</code> and <code>aria-rowindex</code>.</li>
+              <li>Variable height means measuring each row and can cause scroll “jumps”.</li>
+              <li>Printing, restoring scroll position and a sticky header with column widths take extra work.</li>
+              <li>Below a few hundred simple rows, you need none of these techniques.</li>
+            </ul>
+          </div>
+          <div class="tcard combo">
+            <span class="pill good" style="justify-self:start">The common case</span>
+            <h3>Combine both</h3>
+            <p>A large list the user scrolls: infinite scroll with cursor pagination on the server and virtualization on the client. The server delivers in chunks, the client draws only what's visible, and filtering stays on the server so you don't fetch what will be discarded.</p>
+            <p>In React: <code>useInfiniteQuery</code> (TanStack Query) + <code>useVirtualizer</code> (TanStack Virtual).</p>
+          </div>
+        </div>
+      </div>
+      <p class="takeaway"><b>Senior take.</b> Before virtualizing, ask whether anyone needs to see 50 thousand rows. Virtualize when the problem is the DOM and the data fits on the client. Paginate or filter on the server when the problem is volume or search. When it's both, use both.</p>
+    </section>
+
+    <section class="lab" id="thrashing">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Layout thrashing</p>
+        <h2>Reading and writing the DOM, interleaved or batched</h2>
+        <p>Reading a measurement like <code>offsetWidth</code> right after changing a style forces the browser to recalculate layout on the spot. In a loop, that becomes hundreds of recalculations. Run both modes and compare.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <label for="thr-n">Elements <output id="thr-n-out" for="thr-n">800 elements</output></label>
+            <input id="thr-n" type="range" min="100" max="2000" step="100" value="800">
+          </div>
+          <div class="row">
+            <button type="button" class="btn" id="thr-inter-run">Interleaved</button>
+            <button type="button" class="btn primary" id="thr-batch-run">Batched</button>
+          </div>
+        </div>
+        <div class="output">
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="thr-inter">–</span><span class="stat-l">interleaved</span></div>
+            <div class="stat"><span class="stat-n" id="thr-batch">–</span><span class="stat-l">batched</span></div>
+            <div class="stat"><span class="stat-n" id="thr-ratio">–</span><span class="stat-l">difference</span></div>
+          </div>
+          <div id="thr-area" aria-hidden="true"></div>
+        </div>
+      </div>
+      <div class="code-pair">
+        <div><p class="code-label">Interleaved: forces layout on every iteration</p>
+<pre class="code">for (const el of boxes) {
+  const w = el.offsetWidth          <span class="no">// read (forces layout)</span>
+  el.style.width = w + 10 + 'px'    <span class="no">// write (invalidates)</span>
+}</pre></div>
+        <div><p class="code-label">Batched: a single layout</p>
+<pre class="code">const widths = boxes.map(el =&gt; el.offsetWidth)      <span class="ok">// read everything</span>
+boxes.forEach((el, i) =&gt; {
+  el.style.width = widths[i] + 10 + 'px'            <span class="ok">// write everything</span>
+})</pre></div>
+      </div>
+      <p class="takeaway"><b>Senior take.</b> In React you rarely write this loop, but it shows up in hand-made animations, in <code>useLayoutEffect</code> and in third-party libraries. In the DevTools Performance panel, it appears as purple "Layout" blocks with the <i>Forced reflow</i> warning.</p>
+    </section>
+
+    <section id="decidir"></section>
+  </main>
+
+  <nav class="pager" id="pager" aria-label="Module navigation"></nav>
+</div>
+
+<script src="../lab.js"></script>
+<script>
+const { $, $$ } = Lab;
+
+/* Core Web Vitals */
+(() => {
+  const RATING = { good: 'good', warn: 'needs improvement', bad: 'poor' };
+  const rate = (el, v, good, poor) => {
+    const r = v <= good ? 'good' : v <= poor ? 'warn' : 'bad';
+    el.className = 'pill ' + r;
+    el.textContent = RATING[r];
+  };
+  const supported = (window.PerformanceObserver && PerformanceObserver.supportedEntryTypes) || [];
+  const missing = [];
+  const observe = (type, cb, extra = {}) => {
+    if (!supported.includes(type)) { missing.push(type); return; }
+    new PerformanceObserver((list) => cb(list.getEntries())).observe({ type, buffered: true, ...extra });
+  };
+
+  const slot = $('#cwv-slot');
+
+  // LCP: the last candidate before the first interaction
+  observe('largest-contentful-paint', (entries) => {
+    const e = entries[entries.length - 1];
+    $('#cwv-lcp').textContent = (e.startTime / 1000).toFixed(2) + ' s';
+    rate($('#cwv-lcp-r'), e.startTime, 2500, 4000);
+    const el = e.element;
+    const txt = el ? (el.textContent || '').trim().slice(0, 48) : '';
+    $('#cwv-detail').textContent = el ? `LCP element: <${el.tagName.toLowerCase()}>${txt ? ' "' + txt + (txt.length === 48 ? '…' : '') + '"' : ''}` : 'LCP element: removed from the page';
+  });
+
+  // INP: the slowest interaction (with fewer than 50 interactions, it is the worst of all)
+  const byInteraction = new Map();
+  observe('event', (entries) => {
+    let latest = null;
+    for (const e of entries) {
+      if (!e.interactionId) continue;
+      byInteraction.set(e.interactionId, Math.max(byInteraction.get(e.interactionId) || 0, e.duration));
+      if (!latest || e.interactionId >= latest.interactionId) latest = e;
+    }
+    if (!byInteraction.size) return;
+    const inp = Math.max(...byInteraction.values());
+    $('#cwv-inp').textContent = Math.round(inp) + ' ms';
+    rate($('#cwv-inp-r'), inp, 200, 500);
+    if (latest) $('#cwv-status').textContent = `Last interaction: ${latest.name} · ${Math.round(byInteraction.get(latest.interactionId))} ms to next paint`;
+  }, { durationThreshold: 16 });
+
+  // CLS: the largest "window" of shifts (up to 1 s apart, 5 s max)
+  let cls = 0, win = 0, first = 0, last = 0;
+  const describe = (e) => {
+    const nodes = e.sources.map((s) => s.node).filter(Boolean);
+    if (nodes.some((n) => n.closest && n.closest('#vitals') && slot.firstChild)) return 'the notice pushed the content';
+    if (e.startTime < 3000) return 'probably the font swap on load (font-display: swap)';
+    return 'something changed size';
+  };
+  observe('layout-shift', (entries) => {
+    for (const e of entries) {
+      if (e.hadRecentInput) continue;
+      $('#cwv-shift').textContent = `Last shift: ${e.value.toFixed(3)} at ${(e.startTime / 1000).toFixed(1)} s · ${describe(e)}`;
+      if (win && e.startTime - last < 1000 && e.startTime - first < 5000) { win += e.value; last = e.startTime; }
+      else { win = e.value; first = last = e.startTime; }
+      cls = Math.max(cls, win);
+    }
+    $('#cwv-cls').textContent = cls.toFixed(3);
+    rate($('#cwv-cls-r'), cls, 0.1, 0.25);
+  });
+  if (supported.includes('layout-shift')) rate($('#cwv-cls-r'), 0, 0.1, 0.25);
+
+  if (missing.length) {
+    const s = $('#cwv-support');
+    s.hidden = false;
+    s.textContent = `This browser doesn't expose ${missing.join(', ')}. Open it in Chrome or Edge to see all metrics.`;
+    if (missing.includes('largest-contentful-paint')) { $('#cwv-lcp-r').textContent = 'not supported'; $('#cwv-detail').textContent = ''; }
+    if (missing.includes('event')) $('#cwv-inp-r').textContent = 'not supported';
+    if (missing.includes('layout-shift')) $('#cwv-cls-r').textContent = 'not supported';
+  }
+
+  // Trigger INP
+  const ms = $('#inp-ms'), msOut = $('#inp-ms-out'), fb = $('#inp-feedback'), btn = $('#inp-run');
+  ms.addEventListener('input', () => { msOut.textContent = ms.value + ' ms'; });
+  const work = (n) => { const end = performance.now() + n; while (performance.now() < end) {} };
+  const afterNextPaint = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+  let saves = 0;
+  btn.addEventListener('click', async () => {
+    const n = +ms.value, id = ++saves;
+    if ($('input[name=inp-mode]:checked').value === 'block') {
+      work(n);
+      fb.textContent = `Contract ${id} saved. The screen went ${n} ms without responding before showing this.`;
+    } else {
+      fb.textContent = `Saving contract ${id}…`;
+      await afterNextPaint();
+      work(n);
+      fb.textContent = `Contract ${id} saved. The response appeared before the ${n} ms of work.`;
+    }
+  });
+
+  // Trigger CLS
+  const run = $('#cls-run'), clsFb = $('#cls-feedback');
+  let timer = null;
+  const resetSlot = () => {
+    clearTimeout(timer);
+    slot.textContent = '';
+    slot.className = $('input[name=cls-mode]:checked').value === 'reserved' ? 'reserved' : '';
+  };
+  $$('input[name=cls-mode]').forEach((r) => r.addEventListener('change', resetSlot));
+  $('#cls-reset').addEventListener('click', () => { resetSlot(); clsFb.textContent = 'Pick a mode and simulate the response.'; });
+  $('#cls-run').addEventListener('click', () => {
+    resetSlot();
+    clsFb.textContent = 'Waiting for the API…';
+    timer = setTimeout(() => {
+      clsFb.textContent = slot.className === 'reserved' ? 'The notice landed in the space that already existed.' : 'The notice arrived and pushed everything down.';
+      slot.innerHTML = '<div class="cwv-banner"><b>Heads up: 2 contracts expire this week</b>Review the positions before close. This notice came from the API after the page was already on screen.</div>';
+    }, 1000);
+  });
+  resetSlot();
+})();
+
+/* Debounce */
+(() => {
+  const input = $('#deb-input'), range = $('#deb-ms'), out = $('#deb-ms-out'), log = $('#deb-log');
+  let keys = 0, calls = 0, timer = null;
+  const update = () => {
+    $('#deb-keys').textContent = keys;
+    $('#deb-calls').textContent = calls;
+    $('#deb-saved').textContent = keys ? Math.max(0, Math.round((1 - calls / keys) * 100)) + '%' : '0%';
+  };
+  function fire() {
+    calls++;
+    const li = document.createElement('li');
+    li.className = 'new';
+    li.textContent = `GET /api/clients?q="${input.value}"`;
+    log.prepend(li);
+    while (log.children.length > 8) log.lastChild.remove();
+    update();
+  }
+  input.addEventListener('input', () => {
+    keys++;
+    const ms = +range.value;
+    clearTimeout(timer);
+    if (ms === 0) fire(); else timer = setTimeout(fire, ms);
+    update();
+  });
+  range.addEventListener('input', () => { out.textContent = range.value === '0' ? 'no debounce' : range.value + ' ms'; });
+  $('#deb-reset').addEventListener('click', () => {
+    keys = calls = 0; clearTimeout(timer); log.innerHTML = ''; input.value = ''; update(); input.focus();
+  });
+})();
+
+/* Virtualization */
+(() => {
+  const ROW = 32, box = $('#list-box'), n = $('#list-n'), nOut = $('#list-n-out');
+  const farms = ['Fazenda Boa Vista', 'Sítio Santa Rita', 'Fazenda Três Irmãos', 'Agropecuária Serra Azul', 'Fazenda São Jorge', 'Sítio Primavera'];
+  const text = (i) => `#${String(i + 1).padStart(5, '0')} · ${farms[i % farms.length]} · ${((i * 37) % 2000 + 100).toLocaleString('en-US')} bags of soybeans`;
+  let onScroll = null;
+  const fmt = (v) => v.toLocaleString('en-US');
+  const countNodes = () => { $('#list-nodes').textContent = fmt(box.getElementsByTagName('*').length); };
+
+  function render() {
+    const total = +n.value;
+    const mode = $('input[name=list-mode]:checked').value;
+    if (onScroll) { box.removeEventListener('scroll', onScroll); onScroll = null; }
+    box.scrollTop = 0;
+    const t0 = performance.now();
+    box.textContent = '';
+    if (mode === 'all') {
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < total; i++) {
+        const d = document.createElement('div');
+        d.className = 'vrow'; d.textContent = text(i);
+        frag.appendChild(d);
+      }
+      box.appendChild(frag);
+    } else {
+      const spacer = document.createElement('div');
+      spacer.style.cssText = `height:${total * ROW}px;position:relative`;
+      box.appendChild(spacer);
+      const draw = () => {
+        const start = Math.max(0, Math.floor(box.scrollTop / ROW) - 4);
+        const end = Math.min(total, Math.ceil((box.scrollTop + box.clientHeight) / ROW) + 4);
+        spacer.textContent = '';
+        for (let i = start; i < end; i++) {
+          const d = document.createElement('div');
+          d.className = 'vrow';
+          d.style.cssText = `position:absolute;left:0;right:0;top:${i * ROW}px`;
+          d.textContent = text(i);
+          spacer.appendChild(d);
+        }
+        countNodes();
+      };
+      draw();
+      onScroll = () => requestAnimationFrame(draw);
+      box.addEventListener('scroll', onScroll, { passive: true });
+    }
+    void box.scrollHeight; // force layout to measure the real cost
+    $('#list-time').textContent = (performance.now() - t0).toFixed(1) + ' ms';
+    countNodes();
+  }
+  n.addEventListener('input', () => { nOut.textContent = fmt(+n.value) + ' rows'; });
+  n.addEventListener('change', render);
+  $('#list-run').addEventListener('click', render);
+  $$('input[name=list-mode]').forEach((r) => r.addEventListener('change', render));
+  render();
+})();
+
+/* Layout thrashing */
+(() => {
+  const area = $('#thr-area'), n = $('#thr-n'), nOut = $('#thr-n-out');
+  const result = { inter: null, batch: null };
+  function build() {
+    area.textContent = '';
+    for (let i = 0; i < +n.value; i++) {
+      const b = document.createElement('span');
+      b.className = 'tbox'; b.style.width = (10 + (i % 20)) + 'px';
+      area.appendChild(b);
+    }
+    nOut.textContent = n.value + ' elements';
+    result.inter = result.batch = null;
+    $('#thr-inter').textContent = $('#thr-batch').textContent = $('#thr-ratio').textContent = '–';
+  }
+  function run(kind) {
+    const els = [...area.children];
+    const t0 = performance.now();
+    if (kind === 'inter') {
+      for (const el of els) { const w = el.offsetWidth; el.style.width = (w % 30) + 10 + 'px'; }
+    } else {
+      const ws = els.map((el) => el.offsetWidth);
+      els.forEach((el, i) => { el.style.width = (ws[i] % 30) + 10 + 'px'; });
+    }
+    void area.offsetHeight;
+    const ms = performance.now() - t0;
+    result[kind] = ms;
+    $(kind === 'inter' ? '#thr-inter' : '#thr-batch').textContent = ms.toFixed(1) + ' ms';
+    if (result.inter && result.batch) {
+      $('#thr-ratio').textContent = (result.inter / Math.max(result.batch, 0.1)).toFixed(0) + '×';
+    }
+  }
+  n.addEventListener('input', build);
+  $('#thr-inter-run').addEventListener('click', () => run('inter'));
+  $('#thr-batch-run').addEventListener('click', () => run('batch'));
+  build();
+})();
+
+/* Decision */
+Lab.decision($('#decidir'), {
+  title: 'Is it worth optimizing this?',
+  intro: 'Answer about a real case in your system. The flow follows the order a senior uses: measure, locate the symptom, and only then pick the tool.',
+  questions: [
+    { id: 'medido', text: 'Have you measured the problem?', hint: 'DevTools Performance, React Profiler, Lighthouse or production Web Vitals.',
+      options: [{ v: 'sim', label: 'Yes, I have numbers' }, { v: 'nao', label: 'Not yet, it just feels slow' }] },
+    { id: 'sintoma', text: 'Where does the slowness show up?', when: (a) => a.medido === 'sim',
+      options: [{ v: 'digitar', label: 'When typing or filtering' }, { v: 'lista', label: 'Large list or table' }, { v: 'abrir', label: 'When opening the page' }, { v: 'animar', label: 'Janky animation' }] },
+    { id: 'digitar', text: 'What does each key press trigger?', when: (a) => a.sintoma === 'digitar',
+      options: [{ v: 'rede', label: 'A request' }, { v: 'render', label: 'Re-rendering a heavy list' }] },
+    { id: 'lista', text: 'How many items does the user really need to see at once?', when: (a) => a.sintoma === 'lista',
+      options: [{ v: 'poucos', label: 'Up to 200' }, { v: 'medio', label: '200 to 5 thousand' }, { v: 'muitos', label: 'More than 5 thousand' }] },
+    { id: 'abrir', text: 'What weighs most on load?', hint: 'Check the Network tab and the Lighthouse report.', when: (a) => a.sintoma === 'abrir',
+      options: [{ v: 'js', label: 'Large JavaScript' }, { v: 'img', label: 'Images' }, { v: 'api', label: 'Waiting on the API' }] },
+    { id: 'animar', text: 'Which property does the animation change?', when: (a) => a.sintoma === 'animar',
+      options: [{ v: 'layout', label: 'top, left, width or height' }, { v: 'transform', label: 'transform or opacity' }] },
+  ],
+  decide(a) {
+    if (a.medido === 'nao') return { tone: 'warn', title: 'Measure first',
+      body: '<p>Without a before number, you can\'t tell if it improved. Record 5 seconds in the Performance panel while doing the slow action and look for long tasks (over 50 ms).</p><ul><li>In React, use the Profiler to see which component renders too often.</li><li>Write down the before number: it goes in the PR description.</li></ul>' };
+    if (a.sintoma === 'digitar') return a.digitar === 'rede'
+      ? { title: 'Debounce the search and cache the responses', body: '<p>Wait 250 to 400 ms without typing before searching, and let React Query keep responses by key. When a letter is deleted, the result comes back from the cache instantly.</p>', code: "const q = useDebouncedValue(search, 300)\nuseQuery({ queryKey: ['clients', q], queryFn: ..., placeholderData: keepPreviousData })" }
+      : { title: 'Separate the field from the heavy result', body: '<p>The field must respond immediately and the list can update later. Use <code>useDeferredValue</code> and wrap the list in <code>memo</code> so it only recalculates when the deferred value changes.</p>', code: 'const deferred = useDeferredValue(filter)\nconst items = useMemo(() => applyFilter(data, deferred), [data, deferred])' };
+    if (a.sintoma === 'lista') return {
+      poucos: { tone: 'warn', title: 'The problem probably isn\'t the size', body: '<p>200 rows render fast. Look for unnecessary re-renders: unstable keys (array index), objects created inline as props, or global state that changes every second.</p>' },
+      medio: { title: 'Server pagination, or virtualization', body: '<p>Ask product whether the user needs to scroll through everything. If so, use <code>@tanstack/react-virtual</code>. If not, paginate or filter on the backend and the problem goes away.</p>' },
+      muitos: { title: 'Server pagination is mandatory', body: '<p>Fetching more than 5 thousand items weighs on the network and memory before it weighs on the DOM. Paginate with a cursor on the backend and virtualize only the loaded window.</p>' },
+    }[a.lista];
+    if (a.sintoma === 'abrir') return {
+      js: { title: 'Split the bundle by route', body: '<p>Load heavy screens and libraries (charts, editors) with <code>lazy()</code>. Run the bundle analyzer to find duplicated dependencies or ones imported whole.</p>', code: "const Report = lazy(() => import('./Report'))" },
+      img: { title: 'Images at the right size and format', body: '<p>Use AVIF or WebP, set <code>width</code>/<code>height</code> so the layout doesn\'t shift, <code>loading="lazy"</code> below the fold, and <code>srcset</code> for small screens.</p>' },
+      api: { tone: 'warn', title: 'Show something while waiting', body: '<p>Start requests in parallel (no useEffect waterfall), show a skeleton, and prefetch on link hover. If the API takes more than 1 s, take the case to the backend with the numbers.</p>' },
+    }[a.abrir];
+    return a.animar === 'layout'
+      ? { title: 'Animate only transform and opacity', body: '<p>Changing <code>top</code> or <code>width</code> recalculates layout every frame. <code>transform</code> and <code>opacity</code> run on the GPU and cost no layout.</p>', code: '.panel { transition: transform 200ms }\n.panel.open { transform: translateX(0) }' }
+      : { tone: 'warn', title: 'The main thread is busy', body: '<p>If the animation already uses transform and still janks, some JavaScript is running at the same time. Look for long tasks in the Performance panel during the animation.</p>' };
+  },
+});
+</script>
+</body>
+</html>

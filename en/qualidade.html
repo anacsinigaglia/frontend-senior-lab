@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quality and testing · Senior Frontend Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="../lab.css">
+<style>
+  .twin { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 780px) { .twin { grid-template-columns: minmax(0, 1fr); } }
+  .twin-col { display: grid; gap: 12px; align-content: start; min-width: 0; }
+  .flags { display: flex; flex-wrap: wrap; gap: 6px 16px; font: 13px var(--f-mono); }
+  .flags label { display: flex; gap: 6px; align-items: center; }
+  .phone { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-height: 150px; display: grid; gap: 8px; align-content: start; }
+  .phone h3 { font-size: 15px; }
+  .spin { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--muted); }
+  .spin::before { content: ""; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: rot 0.8s linear infinite; }
+  @keyframes rot { to { transform: rotate(360deg); } }
+  .mini-row { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  .empty { font-size: 14px; color: var(--muted); }
+  .cmp { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .cmp p, .cmp output { margin: 0; font: 650 20px var(--f-display); font-variant-numeric: tabular-nums; }
+  .cmp button { font: 600 14px var(--f-body); padding: 9px 13px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); border: 0; cursor: pointer; }
+  .cmp button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .results { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+  .results li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 8px; padding: 6px 9px; border-radius: 6px; font-size: 14px; background: var(--surface); border: 1px solid var(--line); }
+  .results .mark { font: 700 13px var(--f-mono); }
+  .results li.pass .mark { color: var(--good); }
+  .results li.fail { background: var(--bad-soft); border-color: transparent; }
+  .results li.fail .mark { color: var(--bad); }
+  .results .err { grid-column: 2; font: 12px var(--f-mono); color: var(--bad); }
+  .suite-title { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+</style>
+</head>
+<body data-module="qualidade">
+<header class="topbar"><div class="wrap"><a class="brand" href="index.html"><span class="brand-mark">FS</span>Senior Frontend Lab</a><nav class="modnav" id="modnav" aria-label="Modules"></nav></div></header>
+
+<div class="wrap">
+  <header class="page-head">
+    <p class="eyebrow">Module · Quality and testing</p>
+    <h1>Code that keeps the bug from happening</h1>
+    <p class="lede">Quality isn't 100% coverage. It's writing types that won't let you build an invalid state, and tests that break when behavior breaks, and only then.</p>
+    <ul class="senior">
+      <li><b>Models states with types</b>Uses a status union instead of three booleans that can contradict each other.</li>
+      <li><b>Tests what the user sees</b>Queries by text and role, not by CSS class or internal variable.</li>
+      <li><b>Remembers the forgotten states</b>Loading, error and empty are screens, not details.</li>
+    </ul>
+  </header>
+
+  <main>
+    <section class="lab" id="estados">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Impossible states</p>
+        <h2>Three booleans or one status?</h2>
+        <p>On the left, the screen is driven by <code>isLoading</code>, <code>isError</code> and <code>data</code>, which can be turned on in any combination. On the right, a single <code>status</code> only allows valid states. Toggle the flags and look for combinations that make no sense.</p>
+      </div>
+      <div class="twin">
+        <div class="twin-col output">
+          <p class="code-label">Three booleans: 2³ = 8 combinations</p>
+          <div class="flags">
+            <label><input type="checkbox" id="b-loading" checked> isLoading</label>
+            <label><input type="checkbox" id="b-error" checked> isError</label>
+            <label><input type="checkbox" id="b-data"> data</label>
+          </div>
+          <div class="phone" id="bool-phone"></div>
+          <div id="bool-verdict"></div>
+        </div>
+        <div class="twin-col output">
+          <p class="code-label">One status: 4 states, all valid</p>
+          <div class="seg" role="radiogroup" aria-label="Status">
+            <label><input type="radio" name="st" value="loading"><span>loading</span></label>
+            <label><input type="radio" name="st" value="error"><span>error</span></label>
+            <label><input type="radio" name="st" value="empty"><span>empty</span></label>
+            <label><input type="radio" name="st" value="success" checked><span>success</span></label>
+          </div>
+          <div class="phone" id="union-phone"></div>
+          <div class="banner good"><b>You can't build a contradictory screen.</b>And TypeScript only lets you read <code>data</code> inside the <code>success</code> case.</div>
+        </div>
+      </div>
+      <div class="code-pair">
+        <div><p class="code-label">Allows impossible states</p>
+<pre class="code">type State = {
+  isLoading: boolean
+  isError: boolean
+  data?: Contract[]
+}
+<span class="no">// { isLoading: true, isError: true, data: [...] } compiles</span></pre></div>
+        <div><p class="code-label">Discriminated union</p>
+<pre class="code">type State =
+  | { status: 'loading' }
+  | { status: 'error'; error: string }
+  | { status: 'empty' }
+  | { status: 'success'; data: Contract[] }
+
+switch (state.status) {
+  case 'success': return &lt;List items={state.data} /&gt;  <span class="ok">// data only exists here</span>
+  ...
+}</pre></div>
+      </div>
+      <p class="takeaway"><b>Senior take.</b> React Query already returns <code>status</code> as a union. The point is to bring the same idea to your own types: a wizard step, a contract's status, a user permission. If two fields can't be true at the same time, the type should prevent it.</p>
+    </section>
+
+    <section class="lab" id="testes">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Tests</p>
+        <h2>Which test breaks in a refactor?</h2>
+        <p>A bag counter has three versions: the original, a refactor that only changes internal code, and one with a real bug (the number doesn't update on screen). Run both suites against each version. A good test fails on the bug and passes on the refactor.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <span class="field-label">Component version</span>
+            <div class="seg" role="radiogroup" aria-label="Version">
+              <label><input type="radio" name="ver" value="v1" checked><span>v1 original</span></label>
+              <label><input type="radio" name="ver" value="v2"><span>v2 refactored</span></label>
+              <label><input type="radio" name="ver" value="v3"><span>v3 with bug</span></label>
+            </div>
+          </div>
+          <p class="hint" id="ver-desc"></p>
+          <div id="live"></div>
+          <button type="button" class="btn primary" id="run-tests" style="justify-self:start">Run both suites</button>
+          <div id="test-verdict"></div>
+        </div>
+        <div class="output">
+          <div class="suite-title"><p class="code-label" style="margin:0">Tests implementation</p><span id="impl-score"></span></div>
+          <ul class="results" id="impl-results"></ul>
+          <div class="suite-title"><p class="code-label" style="margin:0">Tests behavior</p><span id="beh-score"></span></div>
+          <ul class="results" id="beh-results"></ul>
+        </div>
+      </div>
+      <div class="code-pair">
+        <div><p class="code-label">Coupled to the implementation</p>
+<pre class="code">it('clicking .btn-add adds 10', () =&gt; {
+  const { container } = render(&lt;Counter /&gt;)
+  container.querySelector('.btn-add').click()
+  expect(instance.state.count).toBe(10)   <span class="no">// internal detail</span>
+})</pre></div>
+        <div><p class="code-label">By what the user sees (Testing Library)</p>
+<pre class="code">it('shows 10 bags after recording a sale', async () =&gt; {
+  render(&lt;Counter /&gt;)
+  await user.click(screen.getByRole('button', { name: /record sale/i }))
+  expect(screen.getByText(/10 bags/)).toBeInTheDocument()  <span class="ok">// visible result</span>
+})</pre></div>
+      </div>
+      <p class="takeaway"><b>Senior take.</b> A test that breaks on every refactor teaches the team to ignore red tests. And querying by role and accessible name tests accessibility for free: if <code>getByRole('button')</code> can't find the element, a screen reader can't either.</p>
+    </section>
+
+    <section id="decidir"></section>
+  </main>
+
+  <nav class="pager" id="pager" aria-label="Module navigation"></nav>
+</div>
+
+<script src="../lab.js"></script>
+<script>
+const { $, $$, esc } = Lab;
+
+/* States */
+(() => {
+  const LIST = '<div class="mini-row"><span>Contract 2025-118 · soybeans</span><span>1,200 bags</span></div><div class="mini-row"><span>Contract 2025-121 · corn</span><span>3,400 bags</span></div>';
+  const ERR = '<div class="banner bad"><b>Couldn\'t load the contracts.</b>Check your connection and try again.</div>';
+  const LOAD = '<span class="spin">Loading contracts…</span>';
+  function bools() {
+    const l = $('#b-loading').checked, e = $('#b-error').checked, d = $('#b-data').checked;
+    $('#bool-phone').innerHTML = '<h3>Contracts</h3>' + (l ? LOAD : '') + (e ? ERR : '') + (d ? LIST : '') + (!l && !e && !d ? '<span class="empty">(nothing on screen: no flag covers "empty list")</span>' : '');
+    const on = [l, e, d].filter(Boolean).length;
+    $('#bool-verdict').innerHTML = on > 1
+      ? '<div class="banner bad"><b>Impossible state.</b>The screen shows two situations at once, and the type allowed it.</div>'
+      : on === 0 ? '<div class="banner warn"><b>Ambiguous state.</b>Not loaded yet, or is the list empty? The booleans don\'t say.</div>'
+      : '<div class="banner good"><b>Valid state.</b>But only because you were careful: the type didn\'t help.</div>';
+  }
+  function union() {
+    const s = $('input[name=st]:checked').value;
+    $('#union-phone').innerHTML = '<h3>Contracts</h3>' + {
+      loading: LOAD, error: ERR, success: LIST,
+      empty: '<span class="empty">No contracts this season. <a href="#estados">Add the first one</a></span>',
+    }[s];
+  }
+  ['#b-loading', '#b-error', '#b-data'].forEach((s) => $(s).addEventListener('change', bools));
+  $$('input[name=st]').forEach((r) => r.addEventListener('change', union));
+  bools(); union();
+})();
+
+/* Tests */
+(() => {
+  const LIMIT = 30;
+  const IMPLS = {
+    v1: { desc: 'Original: stores state.count and uses the .counter-value and .btn-add classes.',
+      mount(el) {
+        const inst = { state: { count: 0 } };
+        const draw = () => {
+          el.innerHTML = `<div class="cmp"><p class="counter-value">${inst.state.count} bags sold</p><button type="button" class="btn-add"${inst.state.count >= LIMIT ? ' disabled' : ''}>Record sale (+10)</button></div>`;
+          el.querySelector('.btn-add').onclick = () => { inst.state.count += 10; draw(); };
+        };
+        draw(); return inst;
+      } },
+    v2: { desc: 'Refactored: renamed the state to total and changed the HTML. For the user, nothing changed.',
+      mount(el) {
+        const inst = { state: { total: 0 } };
+        const draw = () => {
+          const t = inst.state.total;
+          el.innerHTML = `<div class="cmp"><output class="qty">${t} bags sold</output><button type="button" data-action="add"${t >= LIMIT ? ' disabled' : ''}>Record sale (+10)</button></div>`;
+          el.querySelector('[data-action=add]').onclick = () => { inst.state = { total: t + 10 }; draw(); };
+        };
+        draw(); return inst;
+      } },
+    v3: { desc: 'With bug: adds to the state but forgets to update the screen. Click and see.',
+      mount(el) {
+        const inst = { state: { count: 0 } };
+        el.innerHTML = `<div class="cmp"><p class="counter-value">0 bags sold</p><button type="button" class="btn-add">Record sale (+10)</button></div>`;
+        el.querySelector('.btn-add').onclick = () => { inst.state.count += 10; };
+        return inst;
+      } },
+  };
+
+  const expect = (v) => ({ toBe: (e) => { if (v !== e) throw new Error(`expected ${e}, received ${v}`); } });
+  const screenOf = (el) => ({
+    getByText(re) {
+      const found = [...el.querySelectorAll('*')].find((n) => re.test(n.textContent.trim()) && ![...n.children].some((c) => re.test(c.textContent.trim())));
+      if (!found) throw new Error(`text ${re} not found`);
+      return found;
+    },
+    getByRole(role, name) {
+      const found = [...el.querySelectorAll('button, [role=button]')].find((b) => name.test(b.textContent));
+      if (!found) throw new Error(`no ${role} with name ${name}`);
+      return found;
+    },
+  });
+  const IMPL_TESTS = [
+    { name: 'state.count starts at 0', fn: (inst) => expect(inst.state.count).toBe(0) },
+    { name: 'clicking .btn-add adds 10 to state.count', fn: (inst, el) => {
+      const b = el.querySelector('.btn-add'); if (!b) throw new Error('.btn-add does not exist');
+      b.click(); expect(inst.state.count).toBe(10); } },
+    { name: 'renders a .counter-value element', fn: (inst, el) => { if (!el.querySelector('.counter-value')) throw new Error('.counter-value does not exist'); } },
+  ];
+  const BEH_TESTS = [
+    { name: 'shows 0 bags at the start', fn: (inst, el) => screenOf(el).getByText(/^0 bags/) },
+    { name: 'shows 10 bags after recording a sale', fn: (inst, el) => {
+      const s = screenOf(el); s.getByRole('button', /record sale/i).click(); s.getByText(/^10 bags/); } },
+    { name: 'disables the button at 30 bags', fn: (inst, el) => {
+      const s = screenOf(el), b = () => s.getByRole('button', /record sale/i);
+      b().click(); b().click(); b().click();
+      if (!b().disabled) throw new Error('the button is still enabled'); } },
+  ];
+
+  function runSuite(tests, impl) {
+    return tests.map((t) => {
+      const el = document.createElement('div'); // each test mounts the component from scratch
+      const inst = impl.mount(el);
+      try { t.fn(inst, el); return { name: t.name, ok: true }; }
+      catch (e) { return { name: t.name, ok: false, err: e.message }; }
+    });
+  }
+  const paint = (id, res) => {
+    $(id).innerHTML = res.map((r) => `<li class="${r.ok ? 'pass' : 'fail'}"><span class="mark">${r.ok ? '✓' : '✗'}</span><span>${esc(r.name)}</span>${r.err ? `<span class="err">${esc(r.err)}</span>` : ''}</li>`).join('');
+  };
+  const score = (res) => {
+    const ok = res.filter((r) => r.ok).length;
+    return `<span class="pill ${ok === res.length ? 'good' : 'bad'}">${ok}/${res.length} passed</span>`;
+  };
+  const ver = () => $('input[name=ver]:checked').value;
+  const VERDICT = {
+    v1: '<div class="banner good"><b>All green, as expected.</b>Now switch to v2.</div>',
+    v2: '<div class="banner bad"><b>False alarm.</b>Nothing broke for the user, but the implementation tests went red. Someone will waste time fixing tests.</div>',
+    v3: '<div class="banner bad"><b>Hidden bug.</b>The implementation tests passed with a broken screen. Only the behavior tests caught the bug.</div>',
+  };
+
+  function mountLive() {
+    $('#ver-desc').textContent = IMPLS[ver()].desc;
+    IMPLS[ver()].mount($('#live'));
+    $('#impl-results').innerHTML = $('#beh-results').innerHTML = '';
+    $('#impl-score').innerHTML = $('#beh-score').innerHTML = '';
+    $('#test-verdict').innerHTML = '';
+  }
+  function run() {
+    const impl = IMPLS[ver()];
+    const a = runSuite(IMPL_TESTS, impl), b = runSuite(BEH_TESTS, impl);
+    paint('#impl-results', a); paint('#beh-results', b);
+    $('#impl-score').innerHTML = score(a); $('#beh-score').innerHTML = score(b);
+    $('#test-verdict').innerHTML = VERDICT[ver()];
+  }
+  $$('input[name=ver]').forEach((r) => r.addEventListener('change', () => { mountLive(); run(); }));
+  $('#run-tests').addEventListener('click', run);
+  mountLive(); run();
+})();
+
+/* Decision */
+Lab.decision($('#decidir'), {
+  title: 'What test should I write for this?',
+  intro: 'Think about the next thing you will ship and what needs to keep working afterwards.',
+  questions: [
+    { id: 'o_que', text: 'What do you want to guarantee?',
+      options: [{ v: 'calc', label: 'A calculation or transformation rule' }, { v: 'comp', label: 'An interactive component' }, { v: 'fluxo', label: 'A full flow (login, contract, payment)' }, { v: 'visual', label: 'How the screen looks' }] },
+    { id: 'risco', text: 'Has this flow broken in production before, or does it span several screens and systems?', when: (a) => a.o_que === 'fluxo',
+      options: [{ v: 'sim', label: 'Yes' }, { v: 'nao', label: 'No' }] },
+    { id: 'rede', text: 'Does the component fetch data from the API?', when: (a) => a.o_que === 'comp',
+      options: [{ v: 'sim', label: 'Yes' }, { v: 'nao', label: 'No' }] },
+  ],
+  decide(a) {
+    if (a.o_que === 'calc') return { title: 'Unit test with a table of cases', body: '<p>Pure functions are the cheapest to test. List the edge cases: zero, negative, empty, cent rounding, season rollover.</p>', code: "it.each([\n  [1000, 128.4, 128400],\n  [0, 128.4, 0],\n])('%i bags at R$ %d = %d', (bags, price, total) => {\n  expect(contractTotal(bags, price)).toBe(total)\n})" };
+    if (a.o_que === 'comp') return { title: 'Integration test with Testing Library', body: '<p>Render the component, interact the way a user would and check what shows up on screen. Query with <code>getByRole</code> and <code>getByLabelText</code>.</p>' + (a.rede === 'sim' ? '<p>Mock the API with MSW instead of mocking fetch or the hook. That way you also test loading, error and empty.</p>' : ''),
+      code: a.rede === 'sim' ? "server.use(http.get('/api/contracts', () => HttpResponse.json([])))\nrender(<Contracts />)\nexpect(await screen.findByText(/no contracts/i)).toBeInTheDocument()" : null };
+    if (a.o_que === 'fluxo') return a.risco === 'sim'
+      ? { title: 'End-to-end test with Playwright', body: '<p>Few and stable: only the flows that make money or block the user. Run them in CI on every PR, use dedicated test data and role-based selectors, never CSS classes.</p>', code: "await page.getByRole('button', { name: 'New contract' }).click()\nawait page.getByLabel('Bags').fill('1000')\nawait expect(page.getByText('Contract created')).toBeVisible()" }
+      : { tone: 'warn', title: 'Integration first, plus one smoke e2e', body: '<p>Cover the screens with integration tests, which are faster and less flaky. A single e2e that walks the happy path already shows the pieces connect.</p>' };
+    return { tone: 'warn', title: 'Visual review, not assertions', body: '<p>Testing color and position with <code>expect</code> produces brittle tests. Use Storybook with screenshot comparison (Chromatic or Playwright) and have a person approve visual changes.</p>' };
+  },
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Technical decisions · Senior Frontend Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="../lab.css">
+<style>
+  .matrix select { width: auto; min-width: 58px; padding: 5px 8px; font-size: 14px; }
+  .matrix input[type="range"] { width: 110px; vertical-align: middle; }
+  .matrix .w { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .matrix .w output { font: 500 13px var(--f-mono); color: var(--accent); width: 12px; }
+  .bars { display: grid; gap: 10px; }
+  .bar { display: grid; grid-template-columns: minmax(96px, 130px) minmax(0, 1fr) 46px; gap: 10px; align-items: center; font-size: 14px; }
+  .bar-track { height: 14px; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--muted); border-radius: 999px; transition: width 0.3s; }
+  .bar.win .bar-fill { background: var(--accent); }
+  .bar.win { font-weight: 700; }
+  .bar .pct { text-align: right; font: 600 13px var(--f-mono); font-variant-numeric: tabular-nums; }
+  .adr-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+  @media (max-width: 780px) { .adr-grid { grid-template-columns: minmax(0, 1fr); } }
+  .adr-grid textarea { font-family: var(--f-body); font-size: 14px; min-height: 64px; }
+  #adr-md { margin: 0; max-height: 520px; overflow: auto; white-space: pre-wrap; }
+  .review-code { margin: 0; }
+  .rc { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 10px; }
+  .rc-text { margin: 0; font-size: 15px; }
+  .rc-who { font: 600 12px var(--f-mono); color: var(--muted); margin: 0; }
+  .rc-fb { font-size: 14px; }
+  .reviews { display: grid; gap: 12px; }
+</style>
+</head>
+<body data-module="decisoes">
+<header class="topbar"><div class="wrap"><a class="brand" href="index.html"><span class="brand-mark">FS</span>Senior Frontend Lab</a><nav class="modnav" id="modnav" aria-label="Modules"></nav></div></header>
+
+<div class="wrap">
+  <header class="page-head">
+    <p class="eyebrow">Module · Technical decisions and leadership</p>
+    <h1>The best choice depends on context</h1>
+    <p class="lede">What sets a senior apart is explaining why they picked an option and what they are giving up. Here you weigh alternatives against explicit criteria, record the decision for the team and practice code review.</p>
+    <ul class="senior">
+      <li><b>States the criteria</b>Says "I chose X because the team is small", not "X is better".</li>
+      <li><b>Leaves a record</b>Whoever joins a year from now understands the why without having to ask.</li>
+      <li><b>Reviews to teach</b>Separates what blocks the merge from personal preference.</li>
+    </ul>
+  </header>
+
+  <main>
+    <section class="lab" id="matriz">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Trade-off matrix</p>
+        <h2>Context, Zustand or Redux Toolkit?</h2>
+        <p>Scores from 1 to 5 say how well each option meets each criterion. Weights say how much each criterion matters to <i>your</i> project. Change the weights or pick a scenario and watch the winner change.</p>
+      </div>
+      <div class="row">
+        <span class="field-label" style="margin-right:4px">Scenarios:</span>
+        <button type="button" class="btn small" data-scenario="pequeno">Team of 2, internal app</button>
+        <button type="button" class="btn small" data-scenario="grande">Team of 15, critical app</button>
+        <button type="button" class="btn small" data-scenario="tempo">Live quotes dashboard</button>
+      </div>
+      <div class="table-wrap">
+        <table class="grid matrix">
+          <thead><tr><th>Criterion</th><th>Weight</th><th class="num">Context</th><th class="num">Zustand</th><th class="num">Redux Toolkit</th></tr></thead>
+          <tbody id="m-body"></tbody>
+        </table>
+      </div>
+      <div class="output">
+        <div class="bars" id="m-bars"></div>
+        <p class="hint" id="m-note" style="margin:0"></p>
+      </div>
+      <p class="takeaway"><b>Senior take.</b> The matrix does not decide for you. It shows which criteria are driving the decision. If a small weight change flips the winner, discuss the weights with the team. The discussion about tools comes after.</p>
+    </section>
+
+    <section class="lab" id="adr">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · ADR</p>
+        <h2>Record the decision in one minute</h2>
+        <p>An ADR (Architecture Decision Record) is a short note in the repository: context, decision, alternatives and consequences. The fields come prefilled with the matrix result. Edit them and copy the Markdown.</p>
+      </div>
+      <div class="adr-grid">
+        <div class="controls">
+          <div class="field"><label for="adr-title">Title</label><input type="text" id="adr-title"></div>
+          <div class="field"><label for="adr-status">Status</label>
+            <select id="adr-status"><option>Proposed</option><option selected>Accepted</option><option>Superseded</option></select></div>
+          <div class="field"><label for="adr-ctx">Context</label><textarea id="adr-ctx"></textarea></div>
+          <div class="field"><label for="adr-dec">Decision</label><textarea id="adr-dec"></textarea></div>
+          <div class="field"><label for="adr-alt">Alternatives considered</label><textarea id="adr-alt"></textarea></div>
+          <div class="field"><label for="adr-con">Consequences</label><textarea id="adr-con"></textarea></div>
+          <button type="button" class="btn ghost small" id="adr-fill" style="justify-self:start">Refill from the matrix</button>
+        </div>
+        <div class="controls">
+          <div class="row" style="justify-content:space-between"><span class="code-label" style="margin:0">docs/adr/007-state-management.md</span><button type="button" class="btn small" id="adr-copy">Copy Markdown</button></div>
+          <pre class="code" id="adr-md"></pre>
+        </div>
+      </div>
+      <p class="takeaway"><b>Senior take.</b> Do not delete an old ADR when the decision changes. Mark it "Superseded" and point to the new one. The history of why we changed also has value.</p>
+    </section>
+
+    <section class="lab" id="review">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Code review</p>
+        <h2>Classify the comments on this PR</h2>
+        <p>Four people reviewed the function below. For each comment, say whether it should block the merge, is a suggestion, is a nit or needs rewriting.</p>
+      </div>
+<pre class="code review-code"><span class="c">// utils/price.ts</span>
+export function averagePrice(prices: number[]) {
+  let total = 0
+  for (let i = 0; i &lt;= prices.length; i++) total += prices[i]
+  return total / prices.length
+}</pre>
+      <div class="reviews" id="reviews"></div>
+      <p class="takeaway"><b>Senior take.</b> Labeling the comment's intent ("blocking:", "suggestion:", "nit:") keeps the author from treating everything as mandatory. And a comment about the code should never be about the person.</p>
+    </section>
+
+    <section id="decidir"></section>
+  </main>
+
+  <nav class="pager" id="pager" aria-label="Module navigation"></nav>
+</div>
+
+<script src="../lab.js"></script>
+<script>
+const { $, $$, esc } = Lab;
+const OPTS = ['Context API', 'Zustand', 'Redux Toolkit'];
+const CRIT = [
+  { id: 'aprender', name: 'Easy to learn', w: 3, s: [5, 4, 2] },
+  { id: 'boiler', name: 'Little boilerplate', w: 3, s: [4, 5, 2] },
+  { id: 'perf', name: 'Performance with frequent updates', w: 2, s: [2, 5, 4] },
+  { id: 'debug', name: 'Debugging tools', w: 2, s: [1, 3, 5] },
+  { id: 'padrao', name: 'Consistency for a large team', w: 2, s: [2, 3, 5] },
+  { id: 'bundle', name: 'Small bundle size', w: 2, s: [5, 5, 2] },
+];
+const SCEN = {
+  pequeno: { aprender: 5, boiler: 4, perf: 1, debug: 1, padrao: 0, bundle: 3 },
+  grande: { aprender: 1, boiler: 1, perf: 3, debug: 5, padrao: 5, bundle: 1 },
+  tempo: { aprender: 2, boiler: 2, perf: 5, debug: 3, padrao: 2, bundle: 2 },
+};
+let lastResult = null;
+
+/* Matrix */
+function drawMatrix() {
+  $('#m-body').innerHTML = CRIT.map((c, ci) => `<tr>
+    <td>${c.name}</td>
+    <td><span class="w"><input type="range" min="0" max="5" value="${c.w}" id="w-${c.id}" aria-label="Weight of ${c.name}" data-ci="${ci}"><output for="w-${c.id}">${c.w}</output></span></td>
+    ${c.s.map((v, oi) => `<td class="num"><select id="s-${c.id}-${oi}" aria-label="Score of ${OPTS[oi]} on ${c.name}" data-ci="${ci}" data-oi="${oi}">${[1, 2, 3, 4, 5].map((n) => `<option${n === v ? ' selected' : ''}>${n}</option>`).join('')}</select></td>`).join('')}
+  </tr>`).join('');
+  compute();
+}
+function compute() {
+  const wsum = CRIT.reduce((s, c) => s + c.w, 0) || 1;
+  const scores = OPTS.map((_, oi) => CRIT.reduce((s, c) => s + c.w * c.s[oi], 0) / (wsum * 5) * 100);
+  const order = scores.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]);
+  const win = order[0][1];
+  $('#m-bars').innerHTML = OPTS.map((o, i) => `<div class="bar${i === win ? ' win' : ''}"><span>${o}</span><div class="bar-track"><div class="bar-fill" style="width:${scores[i].toFixed(1)}%"></div></div><span class="pct">${scores[i].toFixed(0)}</span></div>`).join('');
+  const gap = order[0][0] - order[1][0];
+  const top = [...CRIT].sort((a, b) => b.w - a.w).filter((c) => c.w > 0).slice(0, 2).map((c) => c.name.toLowerCase());
+  $('#m-note').textContent = gap < 5
+    ? `Statistical tie: ${OPTS[order[0][1]]} and ${OPTS[order[1][1]]} are ${gap.toFixed(1)} points apart. Go with what the team already knows, or build a short prototype with both.`
+    : `${OPTS[win]} wins by ${gap.toFixed(0)} points, driven mainly by ${top.join(' and ')}.`;
+  lastResult = { win, order, top, scores };
+}
+$('#m-body').addEventListener('input', (e) => {
+  const t = e.target, c = CRIT[+t.dataset.ci];
+  if (!c) return;
+  if (t.type === 'range') { c.w = +t.value; t.nextElementSibling.textContent = t.value; }
+  else c.s[+t.dataset.oi] = +t.value;
+  compute();
+});
+$$('[data-scenario]').forEach((b) => b.addEventListener('click', () => {
+  const sc = SCEN[b.dataset.scenario];
+  CRIT.forEach((c) => { c.w = sc[c.id]; });
+  drawMatrix();
+  fillAdr(b.textContent);
+}));
+drawMatrix();
+
+/* ADR */
+const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+function fillAdr(scenario) {
+  const { win, order, top } = lastResult;
+  const others = order.slice(1).map(([v, i]) => `- ${OPTS[i]} (${v.toFixed(0)} points)`).join('\n');
+  $('#adr-title').value = `Use ${OPTS[win]} for global client state`;
+  $('#adr-ctx').value = `${scenario ? scenario + '. ' : ''}The app needs to share UI state between distant screens. State from the API is already managed by React Query and is out of scope for this decision. The highest-weighted criteria were ${top.join(' and ')}.`;
+  $('#adr-dec').value = `Adopt ${OPTS[win]} for global client state. Local state stays in useState.`;
+  $('#adr-alt').value = others;
+  $('#adr-con').value = `+ Best meets the criteria of ${top.join(' and ')}.\n- Revisit if the team grows or if global state starts changing very often.`;
+  renderAdr();
+}
+function renderAdr() {
+  const v = (id) => $(id).value.trim();
+  $('#adr-md').textContent =
+`# ADR-007: ${v('#adr-title')}
+
+- Status: ${v('#adr-status')}
+- Date: ${today}
+
+## Context
+${v('#adr-ctx')}
+
+## Decision
+${v('#adr-dec')}
+
+## Alternatives considered
+${v('#adr-alt')}
+
+## Consequences
+${v('#adr-con')}
+`;
+}
+$$('#adr input, #adr textarea, #adr select').forEach((el) => el.addEventListener('input', renderAdr));
+$('#adr-fill').addEventListener('click', () => fillAdr());
+$('#adr-copy').addEventListener('click', (e) => Lab.copyText($('#adr-md').textContent, e.currentTarget));
+fillAdr();
+
+/* Code review */
+(() => {
+  const KINDS = [['bloq', 'Blocking'], ['sug', 'Suggestion'], ['nit', 'Nit'], ['reesc', 'Rewrite']];
+  const ITEMS = [
+    { who: 'carla · line 3', text: 'The loop uses <= and reads prices[prices.length], which is undefined. The total becomes NaN on every call. Could you switch to < and add a test with [10, 20]?',
+      ans: 'bloq', fb: 'It is a bug that breaks every call. Blocking is fair, and the comment explains the problem, shows the evidence and suggests how to prove the fix.' },
+    { who: 'rafael · line 1', text: 'This is awful, redo it.',
+      ans: 'reesc', fb: 'It does not say what is wrong or how to improve it, and it sounds personal. A possible rewrite: "I found the loop hard to follow. Does it read one position past the end? If so, the total becomes NaN."' },
+    { who: 'bia · line 2', text: 'nit: I prefer reduce here, but your call.',
+      ans: 'nit', fb: 'It is a style preference, and the "nit:" already signals that. Let the linter settle style questions whenever possible.' },
+    { who: 'leo · line 1', text: 'If the list is empty, dividing by zero returns NaN. How about returning null and having the screen show "no prices"? Could be a separate PR.',
+      ans: 'sug', fb: 'It points out a real edge case, proposes a solution and makes clear it does not need to hold up this PR.' },
+  ];
+  $('#reviews').innerHTML = ITEMS.map((it, i) => `
+    <div class="rc">
+      <p class="rc-who">${it.who}</p>
+      <p class="rc-text">${esc(it.text)}</p>
+      <div class="seg" role="radiogroup" aria-label="Classification of ${it.who}'s comment">
+        ${KINDS.map(([v, l]) => `<label><input type="radio" name="rv-${i}" value="${v}"><span>${l}</span></label>`).join('')}
+      </div>
+      <div class="rc-fb" id="rv-fb-${i}" aria-live="polite"></div>
+    </div>`).join('');
+  $('#reviews').addEventListener('change', (e) => {
+    const m = e.target.name?.match(/^rv-(\d+)$/);
+    if (!m) return;
+    const it = ITEMS[+m[1]], ok = e.target.value === it.ans;
+    const label = KINDS.find(([v]) => v === it.ans)[1];
+    $('#rv-fb-' + m[1]).innerHTML = `<div class="banner ${ok ? 'good' : 'warn'}"><b>${ok ? 'Exactly.' : `Best answer: ${label}.`}</b>${esc(it.fb)}</div>`;
+  });
+})();
+
+/* Decision */
+Lab.decision($('#decidir'), {
+  title: 'Does this decision need an ADR?',
+  intro: 'Think of a recent or upcoming choice, such as switching the form library, changing the folder structure or adopting a new authentication approach.',
+  questions: [
+    { id: 'reverter', text: 'Can this decision be undone in less than a day of work?', options: [{ v: 'sim', label: 'Yes' }, { v: 'nao', label: 'No' }] },
+    { id: 'afeta', text: 'Does it affect other people, teams or repositories?', options: [{ v: 'sim', label: 'Yes' }, { v: 'nao', label: 'No, only my code' }] },
+    { id: 'alternativas', text: 'Will someone probably ask "why didn\'t we use X?"', options: [{ v: 'sim', label: 'Yes' }, { v: 'nao', label: 'No' }] },
+  ],
+  decide(a) {
+    const pts = (a.reverter === 'nao') + (a.afeta === 'sim') + (a.alternativas === 'sim');
+    if (pts === 0) return { title: 'Not needed', body: '<p>It is a local decision and cheap to change. One line in the PR description is enough. Over-documenting hurts too, because the important decisions get lost in the noise.</p>' };
+    if (pts === 1) return { tone: 'warn', title: 'A short note is enough', body: '<p>Explain the why in the PR description or in a comment near the code. If the same question comes up twice, turn the note into an ADR.</p>' };
+    if (pts === 2) return { title: 'Write an ADR', body: '<p>Use the template above: context, decision, alternatives and consequences. Half a page will do. Put it in <code>docs/adr/</code> and link it in the PR.</p>' };
+    return { tone: 'warn', title: 'ADR before implementing', body: '<p>It is hard to reverse, affects other people and has strong alternatives. Write the ADR as "Proposed", ask the people affected to review it and only implement after it is accepted.</p><ul><li>Include a small prototype if there is technical doubt.</li><li>State under which circumstances you would reopen this decision.</li></ul>' };
+  },
+});
+</script>
+</body>
+</html>

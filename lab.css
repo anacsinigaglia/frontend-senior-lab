@@ -63,6 +63,10 @@ a { color: var(--accent); }
 .modnav a { white-space: nowrap; padding: 6px 11px; border-radius: 999px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 600; }
 .modnav a:hover { color: var(--ink); background: var(--paper); }
 .modnav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+.lang { display: inline-flex; gap: 2px; padding: 2px; margin-left: auto; border: 1px solid var(--line); border-radius: 999px; flex: none; }
+.lang a { padding: 4px 10px; border-radius: 999px; color: var(--muted); text-decoration: none; font: 600 12px/1.4 var(--f-mono); }
+.lang a:hover { color: var(--ink); }
+.lang a[aria-current] { background: var(--accent-soft); color: var(--accent); }
 
 /* Tipografia */
 h1, h2, h3 { font-family: var(--f-display); line-height: 1.12; text-wrap: balance; margin: 0; }

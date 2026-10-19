@@ -1,12 +1,32 @@
 (function () {
+  const LANG = document.documentElement.lang.toLowerCase().startsWith('en') ? 'en' : 'pt';
+
   const MODULES = [
-    { slug: 'performance', short: 'Performance' },
-    { slug: 'seguranca', short: 'Segurança' },
-    { slug: 'semantica', short: 'Semântica e a11y' },
-    { slug: 'arquitetura', short: 'Arquitetura e estado' },
-    { slug: 'qualidade', short: 'Qualidade e testes' },
-    { slug: 'decisoes', short: 'Decisões técnicas' },
+    { slug: 'performance', short: 'Performance', en: 'Performance' },
+    { slug: 'seguranca', short: 'Segurança', en: 'Security' },
+    { slug: 'semantica', short: 'Semântica e a11y', en: 'Semantics & a11y' },
+    { slug: 'arquitetura', short: 'Arquitetura e estado', en: 'Architecture & state' },
+    { slug: 'qualidade', short: 'Qualidade e testes', en: 'Quality & testing' },
+    { slug: 'decisoes', short: 'Decisões técnicas', en: 'Technical decisions' },
   ];
+  const label = (m) => (LANG === 'en' ? m.en : m.short);
+
+  /* Textos compartilhados. As páginas em inglês ficam em en/, com os mesmos nomes de arquivo. */
+  const TEXT = {
+    pt: {
+      prev: 'Anterior', next: 'Próximo', home: 'Início', allModules: 'Todos os módulos', end: 'Fim', backHome: 'Voltar ao início',
+      howToDecide: 'Como decidir', recommendation: 'Recomendação', restart: 'Recomeçar',
+      missing: (n) => (n === 1 ? 'Falta 1 resposta' : `Faltam ${n} respostas`) + ' para a recomendação aparecer aqui.',
+      copied: 'Copiado', copyFallback: 'Selecione o texto e copie', language: 'Idioma',
+    },
+    en: {
+      prev: 'Previous', next: 'Next', home: 'Home', allModules: 'All modules', end: 'End', backHome: 'Back to start',
+      howToDecide: 'How to decide', recommendation: 'Recommendation', restart: 'Start over',
+      missing: (n) => (n === 1 ? '1 answer left' : `${n} answers left`) + ' before the recommendation shows up here.',
+      copied: 'Copied', copyFallback: 'Select the text and copy it', language: 'Language',
+    },
+  };
+  const t = TEXT[LANG];
 
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -30,15 +50,15 @@
     const nav = $('#modnav');
     if (nav) {
       nav.innerHTML = MODULES.map((m) =>
-        `<a href="${m.slug}.html"${m.slug === current ? ' aria-current="page"' : ''}>${m.short}</a>`).join('');
+        `<a href="${m.slug}.html"${m.slug === current ? ' aria-current="page"' : ''}>${label(m)}</a>`).join('');
     }
     const pager = $('#pager');
     if (pager) {
       const i = MODULES.findIndex((m) => m.slug === current);
       const prev = MODULES[i - 1], next = MODULES[i + 1];
       pager.innerHTML =
-        (prev ? `<a href="${prev.slug}.html"><small>Anterior</small><span>${prev.short}</span></a>` : `<a href="index.html"><small>Início</small><span>Todos os módulos</span></a>`) +
-        (next ? `<a class="next" href="${next.slug}.html"><small>Próximo</small><span>${next.short}</span></a>` : `<a class="next" href="index.html"><small>Fim</small><span>Voltar ao início</span></a>`);
+        (prev ? `<a href="${prev.slug}.html"><small>${t.prev}</small><span>${label(prev)}</span></a>` : `<a href="index.html"><small>${t.home}</small><span>${t.allModules}</span></a>`) +
+        (next ? `<a class="next" href="${next.slug}.html"><small>${t.next}</small><span>${label(next)}</span></a>` : `<a class="next" href="index.html"><small>${t.end}</small><span>${t.backHome}</span></a>`);
     }
   }
 
@@ -46,9 +66,9 @@
     const original = btn.textContent;
     try {
       await navigator.clipboard.writeText(text);
-      btn.textContent = 'Copiado';
+      btn.textContent = t.copied;
     } catch (e) {
-      btn.textContent = 'Selecione o texto e copie';
+      btn.textContent = t.copyFallback;
     }
     setTimeout(() => { btn.textContent = original; }, 1800);
   }
@@ -60,7 +80,7 @@
     root.classList.add('decide');
     root.innerHTML = `
       <div class="decide-head">
-        <p class="eyebrow">Como decidir</p>
+        <p class="eyebrow">${t.howToDecide}</p>
         <h2>${cfg.title}</h2>
         ${cfg.intro ? `<p class="lede">${cfg.intro}</p>` : ''}
       </div>
@@ -91,11 +111,11 @@
       const missing = vis.filter((q) => answers[q.id] === undefined).length;
       if (missing) {
         out.className = 'verdict pending';
-        out.innerHTML = `<p class="eyebrow">Recomendação</p><p>${missing === 1 ? 'Falta 1 resposta' : `Faltam ${missing} respostas`} para a recomendação aparecer aqui.</p>`;
+        out.innerHTML = `<p class="eyebrow">${t.recommendation}</p><p>${t.missing(missing)}</p>`;
       } else {
         const r = cfg.decide(answers);
         out.className = 'verdict ' + (r.tone || 'good');
-        out.innerHTML = `<p class="eyebrow">Recomendação</p><h3>${esc(r.title)}</h3>${r.body}${r.code ? `<pre class="code">${esc(r.code)}</pre>` : ''}<button type="button" class="btn ghost small" data-reset>Recomeçar</button>`;
+        out.innerHTML = `<p class="eyebrow">${t.recommendation}</p><h3>${esc(r.title)}</h3>${r.body}${r.code ? `<pre class="code">${esc(r.code)}</pre>` : ''}<button type="button" class="btn ghost small" data-reset>${t.restart}</button>`;
       }
       if (focusId) document.getElementById(focusId)?.focus();
     }
@@ -115,8 +135,25 @@
     render();
   }
 
-  window.Lab = { MODULES, $, $$, esc, store, markVisited, renderNav, copyText, decision };
+  /* Botão PT | EN na barra do topo: leva para a mesma página no outro idioma. */
+  function renderLangSwitch() {
+    const bar = $('.topbar .wrap');
+    if (!bar) return;
+    const file = location.pathname.split('/').pop() || 'index.html';
+    const hrefs = LANG === 'en'
+      ? { pt: '../' + file, en: file }
+      : { pt: file, en: 'en/' + file };
+    const nav = document.createElement('nav');
+    nav.className = 'lang';
+    nav.setAttribute('aria-label', t.language);
+    nav.innerHTML = [['pt', 'PT', 'pt-BR', 'Português'], ['en', 'EN', 'en', 'English']].map(([code, text, hreflang, name]) =>
+      `<a href="${hrefs[code]}${location.hash}" hreflang="${hreflang}" lang="${hreflang}" title="${name}"${code === LANG ? ' aria-current="true"' : ''}>${text}</a>`).join('');
+    bar.appendChild(nav);
+  }
 
+  window.Lab = { LANG, MODULES, $, $$, esc, store, markVisited, renderNav, copyText, decision };
+
+  renderLangSwitch();
   const page = document.body.dataset.module;
   if (page) { renderNav(page); markVisited(page); }
 })();

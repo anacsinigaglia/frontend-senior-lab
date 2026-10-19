@@ -6,6 +6,8 @@ HTML, CSS e JavaScript puros: sem build e sem dependências (só as fontes do Go
 
 Acesse em: https://anacsinigaglia.github.io/frontend-senior-lab/
 
+Versão em inglês: https://anacsinigaglia.github.io/frontend-senior-lab/en/ (o botão **PT | EN** na barra do topo troca o idioma da página atual).
+
 ## Módulos
 
 | Módulo | O que você manipula | Decisão |
@@ -35,11 +37,14 @@ python3 -m http.server
 | `lab.css` | Estilos compartilhados: barra de módulos, bancadas de experimento, blocos de código, painel de decisão e paginação. |
 | `lab.js` | Script compartilhado. Expõe `window.Lab` e, ao carregar, lê `data-module` do `<body>` para montar a navegação e marcar o módulo como visitado. |
 | `<módulo>.html` | Uma página por módulo, com os experimentos e o roteiro de decisão em um `<script>` próprio no fim da página. |
+| `en/` | A versão em inglês: as mesmas páginas, com os mesmos nomes de arquivo, `<html lang="en">` e `lab.css`/`lab.js` carregados de `../`. |
 
 O objeto `window.Lab` contém:
 
-- `MODULES`: lista ordenada dos módulos (`slug` e `short`), usada na navegação e na paginação.
+- `LANG`: `'en'` quando o `<html lang>` da página começa com `en`, senão `'pt'`. Define o idioma dos textos compartilhados (navegação, paginação, painel "Como decidir" e botão de copiar).
+- `MODULES`: lista ordenada dos módulos (`slug`, `short` em português e `en` em inglês), usada na navegação e na paginação.
 - `renderNav(slug)`: preenche `#modnav` (barra do topo) e `#pager` (anterior/próximo).
+- Ao carregar, o `lab.js` também adiciona o botão **PT | EN** no fim da barra do topo, apontando para o mesmo arquivo na outra pasta (`en/<arquivo>` ou `../<arquivo>`) e mantendo o `#hash`.
 - `decision(root, cfg)`: monta o painel "Como decidir" dentro de `root`.
 - `markVisited(slug)` e `store(key, value?)`: leitura e escrita em JSON no localStorage (`store` sem valor lê).
 - `copyText(text, btn)`: copia para a área de transferência e dá retorno no botão.
@@ -48,9 +53,10 @@ O objeto `window.Lab` contém:
 ## Como adicionar um módulo
 
 1. Crie `novo.html` copiando a estrutura de uma página existente: `<body data-module="novo">`, `<nav id="modnav">` no topo, `<section id="decidir">` no fim do conteúdo e `<nav id="pager">` depois dele. Carregue `lab.css` e `lab.js`.
-2. Adicione `{ slug: 'novo', short: 'Nome curto' }` em `MODULES`, no `lab.js`, na posição em que ele deve aparecer na navegação.
+2. Adicione `{ slug: 'novo', short: 'Nome curto', en: 'Short name' }` em `MODULES`, no `lab.js`, na posição em que ele deve aparecer na navegação.
 3. Adicione um card `<a class="mod" href="novo.html" data-slug="novo">` no `index.html`, com o selo `.pill` de "visitado".
-4. No script da página, chame `Lab.decision`:
+4. Crie também `en/novo.html`, a mesma página traduzida, com `<html lang="en">` e `../lab.css`/`../lab.js`, e adicione o card em `en/index.html`.
+5. No script da página, chame `Lab.decision`:
 
 ```js
 Lab.decision(Lab.$('#decidir'), {
