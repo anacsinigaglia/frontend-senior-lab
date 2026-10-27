@@ -1,0 +1,16 @@
+body { font-family: system-ui, sans-serif; line-height: 1.5; margin: 0; }
+main { max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+nav { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+nav button[aria-current='page'] { font-weight: bold; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+.panel { border: 1px solid #ccc; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+.panel h3 { margin-top: 0; }
+.bad { border-color: #d33; }
+.good { border-color: #2a2; }
+.big { font-size: 2rem; margin: 0.5rem 0; }
+.note { color: #555; font-size: 0.9rem; }
+pre { background: #f4f4f8; padding: 0.5rem 0.75rem; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; }
+.render-count { position: relative; }
+.badge { position: absolute; top: 0.75rem; right: 0.75rem; font: 0.8rem ui-monospace, monospace; padding: 0 0.4rem; border-radius: 4px; border: 1px solid #ccc; }
+.profiler { background: #f4f4f8; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; }
+.profiler summary { cursor: pointer; font-weight: 600; }
