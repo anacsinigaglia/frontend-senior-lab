@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Loading &amp; network · Senior Frontend Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="../lab.css">
+<style>
+  .check { display: flex; gap: 8px; align-items: flex-start; font-size: 15px; }
+  .check input { margin-top: 4px; }
+  .bundle { display: grid; gap: 6px; }
+  .brow { display: grid; grid-template-columns: minmax(0, 1fr) 64px; gap: 8px; align-items: center; font-size: 13px; }
+  .brow-bar { height: 22px; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; color: var(--accent-ink); background: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 6px; box-sizing: border-box; }
+  .brow-bar.later { background: repeating-linear-gradient(135deg, var(--paper) 0 6px, var(--line) 6px 12px); color: var(--muted); }
+  .brow-kb { font: 600 12px var(--f-mono); text-align: right; color: var(--muted); }
+  #dyn-out:empty { display: none; }
+  #dyn-out { padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  #img-box { height: 300px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 8px; align-content: start; }
+  .photo { aspect-ratio: 4 / 3; border-radius: 6px; background: var(--paper); display: grid; place-items: center; font: 600 12px var(--f-mono); color: var(--muted); transition: background 0.3s; }
+  .photo.loading { background: repeating-linear-gradient(90deg, var(--paper) 0 10px, var(--line) 10px 20px); }
+  .photo.loaded { background: var(--accent-soft); color: var(--accent); }
+  .wf { display: grid; gap: 6px; }
+  .wf-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 8px; align-items: center; font-size: 13px; }
+  .wf-track { position: relative; height: 16px; background: var(--paper); border-radius: 4px; }
+  .wf-track span { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+  .wf-conn { background: var(--warn); }
+  .wf-dl { background: var(--accent); }
+  .wf-exec { background: var(--bad); }
+  .wf-mark { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--good); }
+  .wf-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); }
+  .wf-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .navlinks { display: flex; flex-wrap: wrap; gap: 8px; }
+  #pf-screen { min-height: 64px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); display: grid; align-content: center; }
+  #conc-gantt { position: relative; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); overflow: hidden; }
+  #conc-gantt span { position: absolute; height: 3px; border-radius: 2px; }
+  #conc-gantt .ok { background: var(--accent); }
+  #conc-gantt .err { background: var(--bad); }
+  #conc-gantt .wait { background: var(--line); }
+</style>
+</head>
+<body data-module="carregamento">
+<header class="topbar"><div class="wrap"><a class="brand" href="index.html"><span class="brand-mark">FS</span>Senior Frontend Lab</a><nav class="modnav" id="modnav" aria-label="Modules"></nav></div></header>
+
+<div class="wrap">
+  <header class="page-head">
+    <p class="eyebrow">Module · Loading &amp; network</p>
+    <h1>Send less, later and in the right order</h1>
+    <p class="lede">The screen is ready sooner when the browser downloads only what it needs now, finds critical files early and puts off the rest. The server also copes better when the client does not fire a hundred requests at once. Here you split a bundle, defer images, reorder the download waterfall, prefetch the next screen and limit concurrency.</p>
+    <ul class="senior">
+      <li><b>Knows what goes in the first download</b>Opens the bundle analyzer before arguing about frameworks.</li>
+      <li><b>Defers what is not visible</b>Screens, libraries and off-screen images load when they are used.</li>
+      <li><b>Protects the server</b>Limits concurrent requests and asks for a batch endpoint instead of a hundred calls.</li>
+    </ul>
+  </header>
+
+  <main>
+    <section class="lab" id="bundle">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Tree shaking, code splitting and dynamic import</p>
+        <h2>What goes in the first download?</h2>
+        <p>A management app with three screens. The user opens the Home screen. Turn the techniques on one by one and see how much JavaScript leaves the initial download and only loads when it is used.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="grid">
+          <thead><tr><th>Technique</th><th>What it does</th><th>Who does it</th></tr></thead>
+          <tbody>
+            <tr><td><b>Tree shaking</b></td><td>Removes code that was imported but never used from the bundle</td><td>The bundler (Vite, webpack, Turbopack), as long as the code uses <code>import</code>/<code>export</code> (ES modules) and has no side effects on import</td></tr>
+            <tr><td><b>Code splitting</b></td><td>Splits the bundle into pieces (chunks) that load separately</td><td>The bundler, at each dynamic <code>import()</code>. Frameworks like Next and React Router split by route on their own</td></tr>
+            <tr><td><b>Dynamic import</b></td><td><code>import('./x')</code> returns a Promise and creates a new chunk</td><td>You, at the point where the code becomes necessary (click, route, modal)</td></tr>
+            <tr><td><b>Lazy loading</b></td><td>Delays loading until the resource is needed or becomes visible</td><td><code>React.lazy</code> and <code>next/dynamic</code> for components; <code>loading="lazy"</code> for images and iframes</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <label class="check"><input type="checkbox" id="b-shake"><span><b>Tree shaking:</b> <code>import { debounce } from 'lodash-es'</code> instead of <code>import _ from 'lodash'</code></span></label>
+          <label class="check"><input type="checkbox" id="b-split"><span><b>Code splitting by route:</b> each screen in its own chunk</span></label>
+          <label class="check"><input type="checkbox" id="b-chart"><span><b>Lazy:</b> chart library with <code>lazy()</code>, only when the chart appears</span></label>
+          <label class="check"><input type="checkbox" id="b-editor"><span><b>Dynamic import:</b> text editor with <code>import()</code> when the modal opens</span></label>
+          <div class="field">
+            <span class="field-label">Network</span>
+            <div class="seg" role="radiogroup" aria-label="Network">
+              <label><input type="radio" name="b-net" value="1.6" checked><span>Slow 4G (1.6 Mbps)</span></label>
+              <label><input type="radio" name="b-net" value="20"><span>Wi-Fi (20 Mbps)</span></label>
+            </div>
+          </div>
+          <p class="hint">Sizes in compressed KB (gzip), in the same range as real libraries. Execution time is a rough estimate for an average phone: about 2.5 ms per compressed KB for the browser to parse, compile and run.</p>
+        </div>
+        <div class="output">
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="b-kb">–</span><span class="stat-l">JS in the initial download</span></div>
+            <div class="stat"><span class="stat-n" id="b-dl">–</span><span class="stat-l">to download</span></div>
+            <div class="stat"><span class="stat-n" id="b-exec">–</span><span class="stat-l">to parse and run</span></div>
+          </div>
+          <div class="bundle" id="b-rows"></div>
+          <p class="hint">Solid bar: goes in the initial download. Striped bar: separate chunk, downloaded only when used.</p>
+        </div>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <h3>A real <code>import()</code></h3>
+          <p class="hint">The button below runs <code>import('../chunks/relatorio.js')</code>. Open the DevTools Network tab before you click: the file only shows up in the list after the click, and the second click does not download it again.</p>
+          <button type="button" class="btn primary" id="dyn-run" style="justify-self:start">Open report</button>
+          <p class="hint" id="dyn-msg" aria-live="polite"></p>
+        </div>
+        <div class="output"><div id="dyn-out"></div></div>
+      </div>
+      <details class="src">
+        <summary>See the code</summary>
+        <div class="code-pair">
+          <div><p class="code-label">Without tree shaking: the whole package goes in</p>
+<pre class="code">import _ from 'lodash'                <span class="no">// ~25 KB</span>
+_.debounce(save, 300)
+
+import * as icons from './icons'       <span class="no">// every icon</span>
+import 'library/styles.css'            <span class="no">// side effect: never removed</span></pre></div>
+          <div><p class="code-label">With tree shaking: only what is used</p>
+<pre class="code">import { debounce } from 'lodash-es'  <span class="ok">// ~1 KB</span>
+debounce(save, 300)
+
+import { HomeIcon } from './icons'
+<span class="c">// the library's package.json: "sideEffects": false</span></pre></div>
+        </div>
+        <div class="code-pair" style="margin-top:10px">
+          <div><p class="code-label">React (Vite): lazy + Suspense</p>
+<pre class="code">const Reports = lazy(() =&gt; import('./screens/reports'))
+
+&lt;Suspense fallback={&lt;Skeleton /&gt;}&gt;
+  &lt;Reports /&gt;
+&lt;/Suspense&gt;
+
+<span class="c">// Only on click: nothing downloads until the modal opens</span>
+async function openEditor() {
+  const { Editor } = await import('./editor')
+}</pre></div>
+          <div><p class="code-label">Next.js: routes are already split</p>
+<pre class="code"><span class="c">// Each page.tsx is already a chunk. For a heavy component:</span>
+const Chart = dynamic(() =&gt; import('./chart'), {
+  loading: () =&gt; &lt;Skeleton /&gt;,
+})
+
+<span class="c">// Client only (uses window, canvas…)</span>
+const Map = dynamic(() =&gt; import('./map'), { ssr: false })</pre></div>
+        </div>
+      </details>
+      <div class="tradeoff">
+        <h3>How to find what is heavy</h3>
+        <p class="tradeoff-q">Optimizing a bundle without looking at it is guessing. The tools below show each dependency as a rectangle the size of the space it takes.</p>
+        <div class="tradeoff-grid four">
+          <div class="tcard">
+            <span class="pill neutral" style="justify-self:start">Analyze</span>
+            <h3>Bundle analyzer</h3>
+            <ul>
+              <li>Vite: <code>rollup-plugin-visualizer</code>.</li>
+              <li>Next: <code>next experimental-analyze</code> (Turbopack) or <code>@next/bundle-analyzer</code>.</li>
+              <li>Before you install a package: bundlephobia.com shows its size and whether it supports tree shaking.</li>
+            </ul>
+          </div>
+          <div class="tcard">
+            <span class="pill warn" style="justify-self:start">Usual suspects</span>
+            <h3>What is often heavy</h3>
+            <ul>
+              <li>Date libraries with every locale, charts, editors, maps, PDF.</li>
+              <li>Duplicate packages in different versions.</li>
+              <li>Barrel files (an <code>index.ts</code> that re-exports everything) with side effects.</li>
+              <li>Polyfills for browsers you do not support.</li>
+            </ul>
+          </div>
+          <div class="tcard">
+            <span class="pill warn" style="justify-self:start">The cost of splitting</span>
+            <h3>Too many chunks also hurt</h3>
+            <ul>
+              <li>Each <code>import()</code> is a network round trip at the moment of use: the user sees a loading state that did not exist before.</li>
+              <li>Splitting off something of 3 KB is not worth it.</li>
+              <li>Preload the chunk when use is likely (on hover, at idle time).</li>
+            </ul>
+          </div>
+          <div class="tcard combo">
+            <span class="pill good" style="justify-self:start">What matters</span>
+            <h3>Performance budget</h3>
+            <p>Set a cap for the initial JS (for example, 170 compressed KB for mobile) and make CI fail when it goes over, with <code>size-limit</code> or the bundler's report. Without this, the bundle only grows.</p>
+          </div>
+        </div>
+      </div>
+      <p class="takeaway"><b>Senior take.</b> JavaScript costs twice: to download and, above all, for the phone to parse and run, while the main thread is busy (which makes INP worse). An image of the same size is much cheaper. Split by route (the framework usually does this), defer what only appears after a click, and measure before and after with the analyzer.</p>
+    </section>
+
+    <section class="lab" id="lazy">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Lazy loading images</p>
+        <h2>Forty photos. How many does the user see?</h2>
+        <p>A storefront with 40 photos of 120 KB each, and only about four fit on screen. Without lazy loading, all of them are requested when the page opens and compete for bandwidth with what is visible. With lazy loading, each photo is requested when it gets close to the screen. Scroll the storefront in both modes.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <span class="field-label">Loading</span>
+            <div class="seg" role="radiogroup" aria-label="Photo loading">
+              <label><input type="radio" name="img-mode" value="eager" checked><span>All on open</span></label>
+              <label><input type="radio" name="img-mode" value="lazy"><span>Lazy (near the screen)</span></label>
+            </div>
+          </div>
+          <button type="button" class="btn ghost small" id="img-reset" style="justify-self:start">Reload the storefront</button>
+          <p class="hint">Lazy mode uses <code>IntersectionObserver</code> with a 150 px margin, the same idea as native <code>loading="lazy"</code>: the photo is requested a little before it appears, so it is ready when it arrives.</p>
+        </div>
+        <div class="output">
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="img-req">0</span><span class="stat-l">photos requested</span></div>
+            <div class="stat"><span class="stat-n" id="img-mb">0</span><span class="stat-l">downloaded</span></div>
+            <div class="stat"><span class="stat-n" id="img-waste">0</span><span class="stat-l">requested and never seen</span></div>
+          </div>
+          <div id="img-box" tabindex="0" aria-label="Photo storefront"></div>
+        </div>
+      </div>
+      <details class="src">
+        <summary>See the code</summary>
+        <div class="code-pair">
+          <div><p class="code-label">Below the fold: lazy</p>
+<pre class="code">&lt;img src="product-12.avif" alt="…"
+     width="400" height="300"     <span class="ok">// reserves the space (CLS)</span>
+     loading="lazy" decoding="async"&gt;
+
+<span class="c">// Next.js: next/image is already lazy by default</span>
+&lt;Image src={photo} alt="…" width={400} height={300} /&gt;</pre></div>
+          <div><p class="code-label">The main image (LCP): never lazy</p>
+<pre class="code">&lt;img src="hero.avif" alt="…" width="1200" height="600"
+     fetchpriority="high"&gt;        <span class="ok">// requested first</span>
+
+<span class="c">// Next.js 16: preload replaces the old priority</span>
+&lt;Image src={hero} alt="…" preload /&gt;
+<span class="c">// or loading="eager" / fetchPriority="high"</span></pre></div>
+        </div>
+      </details>
+      <p class="takeaway"><b>Senior take.</b> Lazy loading is for what is off screen. Putting <code>loading="lazy"</code> on the main image is a common mistake that delays LCP, because the browser waits for layout to decide whether it is visible. Along with lazy loading, serve the right size (<code>srcset</code>/<code>sizes</code>), in AVIF or WebP, and always with <code>width</code> and <code>height</code>.</p>
+    </section>
+
+    <section class="lab" id="cascata">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Preload, preconnect and fetchpriority</p>
+        <h2>What does the browser find late?</h2>
+        <p>The browser only downloads what it has already found. The font only shows up after the CSS is read; the app data, after the JavaScript runs. Each late discovery becomes a step in the waterfall. Turn on the resource hints and watch the steps disappear.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <label class="check"><input type="checkbox" id="w-preconnect"><span><code>&lt;link rel="preconnect"&gt;</code> for the font domain and the API domain</span></label>
+          <label class="check"><input type="checkbox" id="w-preload"><span><code>&lt;link rel="preload" as="font"&gt;</code> for the heading font</span></label>
+          <label class="check"><input type="checkbox" id="w-priority"><span><code>fetchpriority="high"</code> on the main image</span></label>
+          <p class="hint">Connecting to a new domain (DNS, TCP and TLS) costs 250 ms in this model. Without high priority, the main image shares bandwidth with the JavaScript.</p>
+        </div>
+        <div class="output">
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="w-lcp">–</span><span class="stat-l">LCP (main image)</span></div>
+            <div class="stat"><span class="stat-n" id="w-font">–</span><span class="stat-l">heading font ready</span></div>
+            <div class="stat"><span class="stat-n" id="w-data">–</span><span class="stat-l">API data on screen</span></div>
+          </div>
+          <div class="wf" id="w-rows"></div>
+          <div class="wf-legend"><span><i class="wf-conn"></i>Connecting to the domain</span><span><i class="wf-dl"></i>Downloading</span><span><i class="wf-exec"></i>Running JS</span><span><i style="background:var(--good)"></i>LCP</span></div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="grid">
+          <thead><tr><th>Hint</th><th>What it asks the browser</th><th>Use it for</th><th>Watch out</th></tr></thead>
+          <tbody>
+            <tr><td><code>preload</code></td><td>Download now, with priority, something this page will use</td><td>Heading font, LCP image set in CSS</td><td>Only what is critical. Too many preloads compete with everything else, and anything unused within 3 s triggers a console warning</td></tr>
+            <tr><td><code>modulepreload</code></td><td>Same as preload, for JS modules (already parsed)</td><td>Chunks the page will import soon</td><td>Bundlers usually generate it on their own</td></tr>
+            <tr><td><code>preconnect</code></td><td>Open the connection to this domain right away</td><td>API domain, image CDN, fonts</td><td>Two or three domains at most: each open connection has a cost</td></tr>
+            <tr><td><code>dns-prefetch</code></td><td>Resolve only the DNS</td><td>Domains used later; a cheap complement to preconnect</td><td>Small gain</td></tr>
+            <tr><td><code>prefetch</code></td><td>Download, at low priority, something for the <b>next</b> navigation</td><td>The chunk of the likely next screen</td><td>Uses data for people who will never go there</td></tr>
+            <tr><td><code>fetchpriority</code></td><td>Raise or lower the priority of an image, script or <code>fetch()</code></td><td><code>high</code> on the LCP image; <code>low</code> on off-screen carousels</td><td>Only reorders what was already found</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <details class="src">
+        <summary>See the code</summary>
+<pre class="code">&lt;head&gt;
+  &lt;link rel="preconnect" href="https://api.mycompany.com"&gt;
+  &lt;link rel="preload" href="/fonts/heading.woff2" as="font" type="font/woff2" crossorigin&gt;
+&lt;/head&gt;
+&lt;img src="/hero.avif" fetchpriority="high" width="1200" height="600" alt="…"&gt;
+
+<span class="c">// React 19: the same hints from a component</span>
+import { preconnect, preload, prefetchDNS } from 'react-dom'
+preconnect('https://api.mycompany.com')
+preload('/fonts/heading.woff2', { as: 'font', type: 'font/woff2', crossOrigin: '' })
+
+<span class="c">// Next.js: next/font already hosts and preloads the font; next/image has preload</span></pre>
+      </details>
+      <p class="takeaway"><b>Senior take.</b> Resource hints do not make anything lighter: they only start things earlier. That is why they work for what is critical and found late, and get in the way when used on everything. Open the Network tab, sort by the Waterfall column and look for the step: an important resource that only starts after another one finishes.</p>
+    </section>
+
+    <section class="lab" id="prefetch">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Prefetching</p>
+        <h2>Start fetching before the click</h2>
+        <p>Each screen takes 700 ms to arrive from the server. Without prefetch, the user waits all of that after clicking. With prefetch, the fetch starts earlier: when the mouse hovers over the link or when the link appears on screen. Try each mode and compare the wait after the click with what was fetched for nothing.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <span class="field-label">When to fetch the next screen</span>
+            <div class="seg" role="radiogroup" aria-label="Prefetch mode">
+              <label><input type="radio" name="pf-mode" value="none" checked><span>Only on click</span></label>
+              <label><input type="radio" name="pf-mode" value="hover"><span>On hover</span></label>
+              <label><input type="radio" name="pf-mode" value="view"><span>When the link appears</span></label>
+            </div>
+          </div>
+          <div class="navlinks" id="pf-links">
+            <button type="button" class="btn" data-page="Statement">Statement</button>
+            <button type="button" class="btn" data-page="Goals">Goals</button>
+            <button type="button" class="btn" data-page="Reports">Reports</button>
+            <button type="button" class="btn" data-page="Settings">Settings</button>
+          </div>
+          <p class="hint">With the keyboard, focusing the button counts as "hover".</p>
+        </div>
+        <div class="output">
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="pf-wait">–</span><span class="stat-l">wait after the last click</span></div>
+            <div class="stat"><span class="stat-n" id="pf-fetched">0</span><span class="stat-l">screens fetched</span></div>
+            <div class="stat"><span class="stat-n" id="pf-wasted">0</span><span class="stat-l">fetched and not opened</span></div>
+          </div>
+          <div id="pf-screen" aria-live="polite"><p class="hint">Click a screen.</p></div>
+        </div>
+      </div>
+      <details class="src">
+        <summary>See the code</summary>
+        <div class="code-pair">
+          <div><p class="code-label">Next.js: &lt;Link&gt; does it on its own (in production)</p>
+<pre class="code">&lt;Link href="/statement"&gt;Statement&lt;/Link&gt;
+<span class="c">// prefetches when the link appears on screen; on a dynamic route,</span>
+<span class="c">// only up to the nearest loading.tsx</span>
+
+&lt;Link href="/reports" prefetch={false}&gt;      <span class="c">// heavy, rarely used screens</span>
+router.prefetch('/goals')                      <span class="c">// on demand</span></pre></div>
+          <div><p class="code-label">React Query: data on hover</p>
+<pre class="code">&lt;a href="/clients/42"
+   onMouseEnter={() =&gt; queryClient.prefetchQuery({
+     queryKey: ['client', 42],
+     queryFn: () =&gt; api.client(42),
+   })}&gt;
+
+<span class="c">// Chunk of a lazy screen: call import() early</span>
+onMouseEnter={() =&gt; import('./screens/reports')}</pre></div>
+        </div>
+      </details>
+      <p class="takeaway"><b>Senior take.</b> Prefetch trades data and server load for perceived speed. "On hover" is almost always right and wastes little: people take 100 to 300 ms between hovering and clicking. "When it appears" is the fastest and the most wasteful. Turn prefetch off on links to heavy, rarely used screens, and respect <code>navigator.connection.saveData</code>.</p>
+    </section>
+
+    <section class="lab" id="concorrencia">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Limited concurrency</p>
+        <h2>A hundred requests at once. Who goes down?</h2>
+        <p>Refreshing the quote for 40 contracts by calling the API once for each. The simulated API handles 6 requests at the same time: above that it returns <code>429 Too Many Requests</code>, and each extra request in flight makes the others slower. Compare <code>Promise.all</code> with no limit against a concurrency pool.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <label for="conc-n">Requests <output id="conc-n-out" for="conc-n">40</output></label>
+            <input id="conc-n" type="range" min="10" max="100" step="10" value="40">
+          </div>
+          <div class="field">
+            <label for="conc-lim">Concurrency limit <output id="conc-lim-out" for="conc-lim">no limit</output></label>
+            <input id="conc-lim" type="range" min="1" max="21" step="1" value="21">
+          </div>
+          <label class="check"><input type="checkbox" id="conc-retry"><span>On a 429, wait for <code>Retry-After</code> and try again (up to 3 times)</span></label>
+          <button type="button" class="btn primary" id="conc-run" style="justify-self:start">Fire</button>
+        </div>
+        <div class="output">
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="conc-time">–</span><span class="stat-l">total time</span></div>
+            <div class="stat"><span class="stat-n" id="conc-peak">–</span><span class="stat-l">peak concurrency</span></div>
+            <div class="stat"><span class="stat-n" id="conc-ok">–</span><span class="stat-l">succeeded</span></div>
+            <div class="stat"><span class="stat-n" id="conc-429">–</span><span class="stat-l">429 responses</span></div>
+          </div>
+          <div id="conc-gantt" role="img" aria-label="Request timeline"></div>
+          <p class="hint">One line per request, from left (start) to right (end). Teal: success. Red: 429.</p>
+        </div>
+      </div>
+      <details class="src">
+        <summary>See the code</summary>
+        <div class="code-pair">
+          <div><p class="code-label">No limit: everything at once</p>
+<pre class="code">await Promise.all(contracts.map((c) =&gt; api.quote(c.id)))
+<span class="no">// 40 requests at the same instant</span></pre></div>
+          <div><p class="code-label">Pool: at most N at the same time</p>
+<pre class="code">async function withLimit(tasks, limit) {
+  const results = []
+  let next = 0
+  async function worker() {
+    while (next &lt; tasks.length) {
+      const i = next++
+      results[i] = await tasks[i]()
+    }
+  }
+  await Promise.all(Array.from({ length: limit }, worker))
+  return results
+}
+
+<span class="c">// In practice: p-limit</span>
+const limit = pLimit(5)
+await Promise.all(contracts.map((c) =&gt; limit(() =&gt; api.quote(c.id))))</pre></div>
+        </div>
+      </details>
+      <div class="tradeoff">
+        <h3>Controlling load: in the client, the server or the API?</h3>
+        <p class="tradeoff-q">A limit in the client protects the server from one browser. The server has to protect itself from all browsers together. You need both, and the best solution is often to not make forty calls.</p>
+        <div class="tradeoff-grid four">
+          <div class="tcard">
+            <span class="pill good" style="justify-self:start">In the client</span>
+            <h3>Pool and backoff</h3>
+            <ul>
+              <li>A limit of 4 to 6 concurrent requests per batch task (uploads, sync).</li>
+              <li>On a 429 or 503: respect <code>Retry-After</code> and use exponential backoff with jitter, so clients do not all retry at the same instant.</li>
+              <li>Cancel what the user no longer needs with <code>AbortController</code>.</li>
+            </ul>
+          </div>
+          <div class="tcard">
+            <span class="pill neutral" style="justify-self:start">In the server</span>
+            <h3>Limits and queues</h3>
+            <ul>
+              <li><b>Rate limiting</b> per user or IP, returning 429 with <code>Retry-After</code>.</li>
+              <li><b>Database connection pool</b>: the number of concurrent queries is limited, and the rest wait.</li>
+              <li><b>Queue</b> (SQS, BullMQ) for heavy work: reply 202 right away and process at the pace the system can handle.</li>
+              <li><b>Backpressure:</b> refusing early is better than accepting everything and going down.</li>
+            </ul>
+          </div>
+          <div class="tcard">
+            <span class="pill neutral" style="justify-self:start">In the external API</span>
+            <h3>Third-party quota</h3>
+            <ul>
+              <li>Paid APIs limit requests per minute: the limit must be global, in the server, not per tab.</li>
+              <li>Cache responses that do not change (a quote from 5 minutes ago is fine for most screens).</li>
+              <li>Merge identical calls that are already in flight (deduplication).</li>
+            </ul>
+          </div>
+          <div class="tcard combo">
+            <span class="pill good" style="justify-self:start">The best case</span>
+            <h3>Batch endpoint</h3>
+            <p>One request with 40 ids replaces 40 round trips with one. If your team owns the backend, ask for it: <code>POST /quotes { ids: [...] }</code>.</p>
+            <p>Splitting into fixed batches of 6 (waiting for the whole batch before the next) is worse than the pool: each batch moves at the pace of its slowest request.</p>
+          </div>
+        </div>
+      </div>
+      <p class="takeaway"><b>Senior take.</b> <code>Promise.all</code> over a list that comes from data has no limit: today it is 10 items, tomorrow it is 500, and your own app takes down the API or burns the monthly quota. Limit concurrency, handle 429 with backoff and, before all of that, ask whether you can get everything in a single request.</p>
+    </section>
+
+    <section id="decidir"></section>
+  </main>
+
+  <nav class="pager" id="pager" aria-label="Module navigation"></nav>
+</div>
+
+<script src="../lab.js"></script>
+<script>
+const { $, $$, esc } = Lab;
+const fmtMs = (v) => (v >= 1000 ? (v / 1000).toFixed(2) + ' s' : Math.round(v) + ' ms');
+const fmtKb = (v) => (v >= 1000 ? (v / 1000).toFixed(1) + ' MB' : Math.round(v) + ' KB');
+
+/* Bundle */
+(() => {
+  const ids = ['b-shake', 'b-split', 'b-chart', 'b-editor'];
+  function modules(on) {
+    return [
+      { name: 'react + react-dom', kb: 45, later: false },
+      { name: 'Shared code (layout, menu)', kb: 25, later: false },
+      { name: on['b-shake'] ? 'lodash-es: debounce only' : 'all of lodash', kb: on['b-shake'] ? 1 : 25, later: false },
+      { name: 'Home screen', kb: 15, later: false },
+      { name: 'Reports screen', kb: 20, later: on['b-split'] },
+      { name: 'Admin screen (5% of users)', kb: 30, later: on['b-split'] },
+      { name: 'Chart library (Reports)', kb: 95, later: on['b-split'] || on['b-chart'] },
+      { name: 'Text editor (modal)', kb: 110, later: on['b-editor'] },
+    ];
+  }
+  function render() {
+    const on = Object.fromEntries(ids.map((id) => [id, $('#' + id).checked]));
+    const mbps = +$('input[name=b-net]:checked').value;
+    const mods = modules(on);
+    const initial = mods.filter((m) => !m.later).reduce((s, m) => s + m.kb, 0);
+    $('#b-kb').textContent = fmtKb(initial);
+    $('#b-dl').textContent = fmtMs((initial * 8) / mbps);
+    $('#b-exec').textContent = fmtMs(initial * 2.5);
+    const max = Math.max(...mods.map((m) => m.kb));
+    $('#b-rows').innerHTML = mods.map((m) => `
+      <div class="brow"><div><div class="brow-bar${m.later ? ' later' : ''}" style="width:${Math.max(8, (m.kb / max) * 100)}%" title="${esc(m.name)}">${esc(m.name)}</div></div>
+      <span class="brow-kb">${m.kb} KB</span></div>`).join('');
+  }
+  ids.forEach((id) => $('#' + id).addEventListener('change', render));
+  $$('input[name=b-net]').forEach((el) => el.addEventListener('change', render));
+  render();
+
+  let loaded = false;
+  $('#dyn-run').addEventListener('click', async () => {
+    const msg = $('#dyn-msg');
+    const t0 = performance.now();
+    try {
+      const mod = await import('../chunks/relatorio.js');
+      mod.render($('#dyn-out'), 'en');
+      const ms = Math.round(performance.now() - t0);
+      msg.textContent = loaded
+        ? `Ready in ${ms} ms: the module was already in memory, nothing was downloaded.`
+        : `Downloaded and run in ${ms} ms. Look for relatorio.js in the Network tab.`;
+      loaded = true;
+    } catch (e) {
+      msg.textContent = 'The browser blocked import() because the page was opened straight from disk (file://). Serve the folder with "npx serve ." and open it from the local address.';
+    }
+  });
+})();
+
+/* Lazy loading */
+(() => {
+  const N = 40, KB = 120, box = $('#img-box');
+  let reqObs, seenObs, requested, seen;
+  const update = () => {
+    $('#img-req').textContent = `${requested.size} of ${N}`;
+    $('#img-mb').textContent = fmtKb(requested.size * KB);
+    $('#img-waste').textContent = [...requested].filter((i) => !seen.has(i)).length;
+  };
+  function request(el) {
+    const i = +el.dataset.i;
+    if (requested.has(i)) return;
+    requested.add(i);
+    el.className = 'photo loading';
+    setTimeout(() => { el.className = 'photo loaded'; }, 300 + Math.random() * 400);
+    update();
+  }
+  function build() {
+    reqObs?.disconnect(); seenObs?.disconnect();
+    requested = new Set(); seen = new Set();
+    box.scrollTop = 0;
+    box.innerHTML = Array.from({ length: N }, (_, i) => `<div class="photo" data-i="${i}">photo ${i + 1}</div>`).join('');
+    const photos = $$('.photo', box);
+    seenObs = new IntersectionObserver((entries) => {
+      for (const e of entries) if (e.isIntersecting) seen.add(+e.target.dataset.i);
+      update();
+    }, { root: box });
+    photos.forEach((p) => seenObs.observe(p));
+    if ($('input[name=img-mode]:checked').value === 'eager') {
+      photos.forEach(request);
+    } else {
+      reqObs = new IntersectionObserver((entries) => {
+        for (const e of entries) if (e.isIntersecting) { request(e.target); reqObs.unobserve(e.target); }
+      }, { root: box, rootMargin: '150px 0px' });
+      photos.forEach((p) => reqObs.observe(p));
+    }
+    update();
+  }
+  $$('input[name=img-mode]').forEach((el) => el.addEventListener('change', build));
+  $('#img-reset').addEventListener('click', build);
+  build();
+})();
+
+/* Waterfall */
+(() => {
+  const CONN = 250, SCALE = 2000;
+  function render() {
+    const pc = $('#w-preconnect').checked, pl = $('#w-preload').checked, hi = $('#w-priority').checked;
+    const rows = [];
+    rows.push({ name: 'HTML', parts: [['dl', 0, 300]] });
+    rows.push({ name: 'CSS', parts: [['dl', 300, 550]] });
+    const fontStart = pl ? 300 : 550;
+    const fontConn = pc ? 0 : CONN;
+    const fontEnd = fontStart + fontConn + 200;
+    rows.push({ name: 'Heading font', parts: [...(fontConn ? [['conn', fontStart, fontStart + fontConn]] : []), ['dl', fontStart + fontConn, fontEnd]] });
+    rows.push({ name: 'app.js', parts: [['dl', 300, 900], ['exec', 900, 1050]] });
+    const imgEnd = hi ? 900 : 1300;
+    rows.push({ name: 'Main image', parts: [['dl', 300, imgEnd]] });
+    const apiConn = pc ? 0 : CONN;
+    const dataEnd = 1050 + apiConn + 400;
+    rows.push({ name: 'API data', parts: [...(apiConn ? [['conn', 1050, 1050 + apiConn]] : []), ['dl', 1050 + apiConn, dataEnd]] });
+    const lcp = Math.max(imgEnd, 550);
+    const pct = (v) => (v / SCALE) * 100 + '%';
+    $('#w-rows').innerHTML = rows.map((r) => `
+      <div class="wf-row"><span>${r.name}</span><div class="wf-track">
+      ${r.parts.map(([k, a, b]) => `<span class="wf-${k}" style="left:${pct(a)};width:${pct(b - a)}"></span>`).join('')}
+      <i class="wf-mark" style="left:${pct(lcp)}"></i></div></div>`).join('');
+    $('#w-lcp').textContent = fmtMs(lcp);
+    $('#w-font').textContent = fmtMs(fontEnd);
+    $('#w-data').textContent = fmtMs(dataEnd);
+  }
+  ['w-preconnect', 'w-preload', 'w-priority'].forEach((id) => $('#' + id).addEventListener('change', render));
+  render();
+})();
+
+/* Prefetch */
+(() => {
+  const LOAD = 700;
+  const links = $$('#pf-links [data-page]');
+  let cache, opened;
+  const mode = () => $('input[name=pf-mode]:checked').value;
+  const update = () => {
+    $('#pf-fetched').textContent = cache.size;
+    $('#pf-wasted').textContent = [...cache.keys()].filter((p) => !opened.has(p)).length;
+  };
+  function fetchPage(page) {
+    if (!cache.has(page)) {
+      cache.set(page, new Promise((r) => setTimeout(r, LOAD)));
+      update();
+    }
+    return cache.get(page);
+  }
+  function reset() {
+    cache = new Map(); opened = new Set();
+    $('#pf-wait').textContent = '–';
+    $('#pf-screen').innerHTML = '<p class="hint">Click a screen.</p>';
+    if (mode() === 'view') links.forEach((l) => fetchPage(l.dataset.page));
+    update();
+  }
+  links.forEach((l) => {
+    const hover = () => { if (mode() === 'hover') fetchPage(l.dataset.page); };
+    l.addEventListener('pointerenter', hover);
+    l.addEventListener('focus', hover);
+    l.addEventListener('click', async () => {
+      const page = l.dataset.page, t0 = performance.now();
+      opened.add(page);
+      $('#pf-screen').innerHTML = `<p class="hint">Loading ${esc(page)}…</p>`;
+      await fetchPage(page);
+      const wait = performance.now() - t0;
+      $('#pf-wait').textContent = fmtMs(wait);
+      $('#pf-screen').innerHTML = `<h3>${esc(page)}</h3><p class="hint">Appeared ${Math.round(wait)} ms after the click.</p>`;
+      update();
+    });
+  });
+  $$('input[name=pf-mode]').forEach((el) => el.addEventListener('change', reset));
+  reset();
+})();
+
+/* Limited concurrency */
+(() => {
+  const CAP = 6, BASE = 400, RETRY_AFTER = 500;
+  const n = $('#conc-n'), lim = $('#conc-lim'), gantt = $('#conc-gantt'), btn = $('#conc-run');
+  n.addEventListener('input', () => { $('#conc-n-out').textContent = n.value; });
+  lim.addEventListener('input', () => { $('#conc-lim-out').textContent = lim.value === '21' ? 'no limit' : lim.value; });
+
+  let inflight = 0, peak = 0;
+  function api() {
+    inflight++;
+    peak = Math.max(peak, inflight);
+    const over = inflight > CAP;
+    const ms = over ? 60 : BASE * (1 + 0.08 * inflight) * (0.8 + Math.random() * 0.4);
+    return new Promise((resolve) => setTimeout(() => { inflight--; resolve(over ? 429 : 200); }, ms));
+  }
+
+  async function pool(tasks, limit) {
+    let next = 0;
+    async function worker() { while (next < tasks.length) await tasks[next++](); }
+    await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
+  }
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    const total = +n.value, limit = lim.value === '21' ? Infinity : +lim.value, retry = $('#conc-retry').checked;
+    const spans = [];
+    let ok = 0, tooMany = 0;
+    peak = 0;
+    const t0 = performance.now();
+    const tasks = Array.from({ length: total }, (_, i) => async () => {
+      for (let attempt = 0; attempt <= (retry ? 3 : 0); attempt++) {
+        const a = performance.now() - t0;
+        const status = await api();
+        spans.push({ i, a, b: performance.now() - t0, cls: status === 200 ? 'ok' : 'err' });
+        if (status === 200) { ok++; return; }
+        tooMany++;
+        if (attempt < 3 && retry) {
+          const wait = RETRY_AFTER * 2 ** attempt * (0.5 + Math.random());
+          const w0 = performance.now() - t0;
+          await new Promise((r) => setTimeout(r, wait));
+          spans.push({ i, a: w0, b: performance.now() - t0, cls: 'wait' });
+        }
+      }
+    });
+    await pool(tasks, limit);
+    const elapsed = performance.now() - t0;
+    $('#conc-time').textContent = fmtMs(elapsed);
+    $('#conc-peak').textContent = peak;
+    $('#conc-ok').textContent = `${ok} of ${total}`;
+    $('#conc-429').textContent = tooMany;
+    const rowH = 5;
+    gantt.style.height = total * rowH + 8 + 'px';
+    gantt.innerHTML = spans.map((s) => `<span class="${s.cls}" style="top:${4 + s.i * rowH}px;left:${(s.a / elapsed) * 100}%;width:max(2px, ${((s.b - s.a) / elapsed) * 100}%)"></span>`).join('');
+    btn.disabled = false;
+  });
+})();
+
+/* Decision */
+Lab.decision($('#decidir'), {
+  title: 'What do I load first?',
+  intro: 'Answer about a real screen. First of all, open the Network tab and Lighthouse: the answers should come from them, not from your gut.',
+  questions: [
+    { id: 'sintoma', text: 'What is the problem?',
+      options: [{ v: 'abrir', label: 'The first visit takes long to show the screen' }, { v: 'navegar', label: 'Switching screens is slow' }, { v: 'muitas', label: 'Many requests at once: slowness or 429' }] },
+    { id: 'peso', text: 'What is the biggest item in Lighthouse and the Network tab?', when: (a) => a.sintoma === 'abrir',
+      options: [{ v: 'js', label: 'JavaScript' }, { v: 'img', label: 'Images' }, { v: 'tarde', label: 'A font, image or API call that starts late (steps in the waterfall)' }] },
+    { id: 'previsivel', text: 'Can you predict the next screen?', when: (a) => a.sintoma === 'navegar',
+      options: [{ v: 'sim', label: 'Yes, a few obvious paths' }, { v: 'nao', label: 'No, many options' }] },
+    { id: 'lote', text: 'Does the backend have (or could it have) an endpoint that accepts several items?', when: (a) => a.sintoma === 'muitas',
+      options: [{ v: 'sim', label: 'Yes, or I can ask for one' }, { v: 'nao', label: 'No, it is a third-party API' }] },
+  ],
+  decide(a) {
+    if (a.sintoma === 'abrir') return {
+      js: { title: 'Split the bundle and defer what comes after the click', body: '<p>Run the bundle analyzer. Replace whole-package imports with named imports, move screens into route chunks, and load charts, editors and modals with <code>lazy()</code>/<code>dynamic()</code>. Set an initial JS budget in CI.</p>', code: "const Editor = lazy(() => import('./editor'))" },
+      img: { title: 'Lazy off screen, priority on the main image', body: '<p><code>loading="lazy"</code> on everything below the fold, <code>fetchpriority="high"</code> on the LCP image, AVIF or WebP at the right size with <code>srcset</code>, and always <code>width</code>/<code>height</code>.</p>' },
+      tarde: { title: 'Start early what is critical and found late', body: '<p><code>preload</code> the heading font and the LCP image that comes from CSS, <code>preconnect</code> to the API and the CDN. If the data only starts loading after the JS runs, fetch it on the server (SSR) or start the fetch earlier, outside <code>useEffect</code>.</p>' },
+    }[a.peso];
+    if (a.sintoma === 'navegar') return a.previsivel === 'sim'
+      ? { title: 'Prefetch the next steps', body: '<p>In Next, <code>&lt;Link&gt;</code> already prefetches when it appears on screen. Elsewhere, fetch on hover: data with <code>prefetchQuery</code> and the chunk with the screen\'s <code>import()</code>.</p>' }
+      : { tone: 'warn', title: 'Prefetch on hover and an instant loading state', body: '<p>Preloading everything wastes data and server capacity. Fetch only on hover and show a skeleton right on click (<code>loading.tsx</code> in Next) so the switch feels immediate.</p>' };
+    return a.lote === 'sim'
+      ? { title: 'One batch request', body: '<p>Ask the backend for an endpoint that accepts several ids. One round trip instead of dozens fixes both the time and the load.</p>', code: 'POST /quotes\n{ "ids": [1, 2, 3, ...] }' }
+      : { tone: 'warn', title: 'A limited pool with backoff, ideally on the server', body: '<p>Limit to 4 to 6 concurrent requests, respect <code>Retry-After</code> on a 429 and use backoff with jitter. If the quota is shared by the whole company, make the calls through your server, with a global limit and cached responses.</p>', code: 'const limit = pLimit(5)\nawait Promise.all(ids.map((id) => limit(() => api.get(id))))' };
+  },
+});
+</script>
+</body>
+</html>

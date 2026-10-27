@@ -3,6 +3,8 @@
 
   const MODULES = [
     { slug: 'performance', short: 'Performance', en: 'Performance' },
+    { slug: 'carregamento', short: 'Carregamento e rede', en: 'Loading & network' },
+    { slug: 'renderizacao', short: 'Renderização e cache', en: 'Rendering & caching' },
     { slug: 'seguranca', short: 'Segurança', en: 'Security' },
     { slug: 'semantica', short: 'Semântica e a11y', en: 'Semantics & a11y' },
     { slug: 'arquitetura', short: 'Arquitetura e estado', en: 'Architecture & state' },

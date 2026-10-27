@@ -2,7 +2,7 @@
 
 **English** · [Português](README.pt-BR.md)
 
-An interactive study lab about how a senior frontend engineer thinks. There are six modules, one per topic. In each one you trigger the problem in experiments that really run in the browser, read the code behind it (the broken version next to the working one), get a "Senior take" and finish with a set of questions ("How to decide") that leads to a recommendation for your case.
+An interactive study lab about how a senior frontend engineer thinks. There are eight modules, one per topic. In each one you trigger the problem in experiments that really run in the browser, read the code behind it (the broken version next to the working one), get a "Senior take" and finish with a set of questions ("How to decide") that leads to a recommendation for your case.
 
 Plain HTML, CSS and JavaScript: no build step and no dependencies (only the Google Fonts).
 
@@ -15,6 +15,8 @@ Portuguese version: https://anacsinigaglia.github.io/frontend-senior-lab/ (the *
 | Module | What you play with | Decision |
 | --- | --- | --- |
 | [Performance](en/performance.html) | Core Web Vitals (LCP, INP, CLS) measured live, and when to use Lighthouse, the Performance panel or the React Profiler; debounce on a customer search; a 50,000-row table with and without virtualization; layout thrashing measured in ms | Is this worth optimizing? |
+| [Loading & network](en/carregamento.html) | Tree shaking, code splitting and lazy loading on a simulated bundle, plus a real `import()`; a product grid with and without image lazy loading; the download waterfall with `preload`, `preconnect` and `fetchpriority`; prefetch on click, on hover or when the link shows up; unbounded `Promise.all` against a concurrency pool on an API that returns 429 | What do I load first? |
+| [Rendering & caching](en/renderizacao.html) | SSG, ISR, SSR and CSR side by side (TTFB, LCP, API calls, the HTML the crawler gets and the SEO of each); time-based revalidation, `revalidateTag` and `updateTag`; the Next.js cache layers and what makes a route dynamic | Where should this page be rendered? |
 | [Security](en/seguranca.html) | An XSS comment that reads the token; token in localStorage, memory or an httpOnly cookie; links with a disguised `javascript:` | Where do I store authentication? |
 | [Semantics & a11y](en/semantica.html) | A div styled as a button versus a `<button>` on the keyboard; what `type="submit"`, `"button"` or no `type` does in a real form; what the screen reader announces and its navigation shortcuts; contrast by the WCAG rule; what semantic elements give beyond accessibility (div vs. real link) | Which element do I use? |
 | [Architecture & state](en/arquitetura.html) | Prop drilling, Context or a store: what re-renders; derived state (the total that goes stale and the prop copied into state); server cache shared by two screens and invalidation after a sale | Where should this state live? |
@@ -39,6 +41,7 @@ python3 -m http.server
 | `lab.css` | Shared styles: module bar, experiment benches, code blocks, decision panel and pagination. |
 | `lab.js` | Shared script. Exposes `window.Lab` and, on load, reads `data-module` from `<body>` to build the navigation and mark the module as visited. |
 | `<module>.html` | One page per module, with the experiments and the decision questions in its own `<script>` at the end of the page. |
+| `chunks/` | JavaScript modules the experiments load with `import()` (for now, the report in the Loading & network module). Shared by both language versions. |
 | `en/` | The English version: the same pages with the same file names, `<html lang="en">`, and `lab.css`/`lab.js` loaded from `../`. |
 
 File names stay in Portuguese in both versions (`seguranca.html`, `decisoes.html`…), so the language switch only has to swap the folder.

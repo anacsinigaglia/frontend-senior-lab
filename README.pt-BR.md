@@ -2,7 +2,7 @@
 
 [English](README.md) · **Português**
 
-Laboratório de estudo interativo sobre como um frontend sênior pensa. São seis módulos, um por assunto. Em cada um você provoca o problema em experimentos que rodam de verdade no navegador, lê o código por trás (a versão com problema ao lado da versão que funciona), fecha com uma "Leitura de sênior" e termina num roteiro de perguntas ("Como decidir") que leva a uma recomendação para o seu caso.
+Laboratório de estudo interativo sobre como um frontend sênior pensa. São oito módulos, um por assunto. Em cada um você provoca o problema em experimentos que rodam de verdade no navegador, lê o código por trás (a versão com problema ao lado da versão que funciona), fecha com uma "Leitura de sênior" e termina num roteiro de perguntas ("Como decidir") que leva a uma recomendação para o seu caso.
 
 HTML, CSS e JavaScript puros: sem build e sem dependências (só as fontes do Google Fonts).
 
@@ -15,6 +15,8 @@ Versão em inglês: https://anacsinigaglia.github.io/frontend-senior-lab/en/ (o 
 | Módulo | O que você manipula | Decisão |
 | --- | --- | --- |
 | [Performance](performance.html) | Core Web Vitals (LCP, INP, CLS) medidos ao vivo, e quando usar Lighthouse, aba Performance ou React Profiler; debounce numa busca de clientes; tabela de 50 mil linhas com e sem virtualização; layout thrashing medido em ms | Vale a pena otimizar isso? |
+| [Carregamento e rede](carregamento.html) | Tree shaking, code splitting e lazy num bundle simulado, mais um `import()` de verdade; vitrine com e sem lazy loading de imagens; a cascata de downloads com `preload`, `preconnect` e `fetchpriority`; prefetch no clique, ao passar o mouse ou quando o link aparece; `Promise.all` sem limite contra um pool de concorrência numa API que devolve 429 | O que eu carrego primeiro? |
+| [Renderização e cache](renderizacao.html) | SSG, ISR, SSR e CSR lado a lado (TTFB, LCP, chamadas à API, o HTML que o robô recebe e o SEO de cada uma); revalidação por tempo, `revalidateTag` e `updateTag`; as camadas de cache do Next.js e o que torna uma rota dinâmica | Onde essa página deve ser renderizada? |
 | [Segurança](seguranca.html) | Um comentário com XSS que lê o token; token em localStorage, memória ou cookie httpOnly; links com `javascript:` disfarçado | Onde guardo a autenticação? |
 | [Semântica e a11y](semantica.html) | Div com cara de botão contra `<button>` no teclado; o que `type="submit"`, `"button"` ou sem `type` faz num formulário de verdade; o que o leitor de tela anuncia e seus atalhos de navegação; contraste pela regra da WCAG; o que o elemento semântico dá além da acessibilidade (div contra link de verdade) | Qual elemento eu uso? |
 | [Arquitetura e estado](arquitetura.html) | Prop drilling, Context ou store: quem renderiza de novo; estado derivado (o total que fica velho e a prop copiada para o estado); cache de servidor entre duas telas e invalidação depois de uma venda | Onde esse estado deve morar? |
@@ -39,6 +41,7 @@ python3 -m http.server
 | `lab.css` | Estilos compartilhados: barra de módulos, bancadas de experimento, blocos de código, painel de decisão e paginação. |
 | `lab.js` | Script compartilhado. Expõe `window.Lab` e, ao carregar, lê `data-module` do `<body>` para montar a navegação e marcar o módulo como visitado. |
 | `<módulo>.html` | Uma página por módulo, com os experimentos e o roteiro de decisão em um `<script>` próprio no fim da página. |
+| `chunks/` | Módulos JavaScript carregados com `import()` pelos experimentos (hoje, o relatório do módulo Carregamento e rede). Servem às duas versões de idioma. |
 | `en/` | A versão em inglês: as mesmas páginas, com os mesmos nomes de arquivo, `<html lang="en">` e `lab.css`/`lab.js` carregados de `../`. |
 
 O objeto `window.Lab` contém:

@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rendering &amp; caching · Senior Frontend Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=JetBrains+Mono:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="../lab.css">
+<style>
+  .stat .pill { justify-self: start; }
+  .rtable td, .rtable th { white-space: nowrap; }
+  .rtable tr.sel td { background: var(--accent-soft); }
+  .tl { display: grid; gap: 8px; }
+  .tl-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 64px; gap: 8px; align-items: center; font: 600 12px var(--f-mono); }
+  .tl-bar { display: flex; height: 14px; border-radius: 4px; overflow: hidden; background: var(--paper); }
+  .tl-bar span { height: 100%; }
+  .tl-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); }
+  .tl-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .seg-net { background: var(--line); }
+  .seg-srv { background: var(--accent); }
+  .seg-api { background: var(--warn); }
+  .seg-js { background: var(--bad); }
+  .seg-paint { background: var(--good); }
+  .parts { display: grid; gap: 8px; }
+  .part { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 14px; }
+  .check { display: flex; gap: 8px; align-items: flex-start; font-size: 15px; }
+  .check input { margin-top: 4px; }
+  .log li.bad { color: var(--bad); }
+</style>
+</head>
+<body data-module="renderizacao">
+<header class="topbar"><div class="wrap"><a class="brand" href="index.html"><span class="brand-mark">FS</span>Senior Frontend Lab</a><nav class="modnav" id="modnav" aria-label="Modules"></nav></div></header>
+
+<div class="wrap">
+  <header class="page-head">
+    <p class="eyebrow">Module · Rendering &amp; caching</p>
+    <h1>Where and when the page is built</h1>
+    <p class="lede">SSG, ISR, SSR and CSR are not project styles. They are answers to three questions about the data. Is it the same for everyone? How often does it change? Can it arrive a few seconds old? Here you see what each answer costs in load time, API calls and SEO.</p>
+    <ul class="senior">
+      <li><b>Decides by the data, not by fashion</b>Asks who sees the content and how often it changes before picking a strategy.</li>
+      <li><b>Thinks in cache, not in modes</b>In the App Router, rendering follows from what can be cached and for how long.</li>
+      <li><b>Mixes them on the same page</b>Static shell, cached block and per-user part streamed in.</li>
+    </ul>
+  </header>
+
+  <main>
+    <section class="lab" id="estrategias">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · The four strategies</p>
+        <h2>The same product page, built four ways</h2>
+        <p>Change the API latency and the traffic, and see what happens to the time until content appears, to the server load and to what Google's crawler receives. The numbers come from a simple model, explained below the controls. What matters is the ratio between the strategies, not the exact millisecond.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="grid">
+          <thead><tr><th>Strategy</th><th>When the HTML is generated</th><th>Where</th><th>Typical example</th></tr></thead>
+          <tbody>
+            <tr><td><b>SSG</b><br><small>Static Site Generation</small></td><td>Once, at build time</td><td>Build server, then CDN</td><td>Landing page, blog, documentation, login page</td></tr>
+            <tr><td><b>ISR</b><br><small>Incremental Static Regeneration</small></td><td>At build time, and again after a time limit or a signal (<code>revalidateTag</code>)</td><td>Server, stored in cache and served by the CDN</td><td>Catalog, product page, news article</td></tr>
+            <tr><td><b>SSR</b><br><small>Server-Side Rendering</small></td><td>On every request</td><td>Server</td><td>Logged-in area, cart, indexable search</td></tr>
+            <tr><td><b>CSR</b><br><small>Client-Side Rendering</small></td><td>In the browser, after the JS arrives and fetches the data</td><td>Browser</td><td>Editor, highly interactive dashboard, anything that comes after a click</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <label for="r-lat">API latency <output id="r-lat-out" for="r-lat">400 ms</output></label>
+            <input id="r-lat" type="range" min="50" max="2000" step="50" value="400">
+          </div>
+          <div class="field">
+            <label for="r-vis">Visits per hour <output id="r-vis-out" for="r-vis">10,000</output></label>
+            <input id="r-vis" type="range" min="0" max="4" step="1" value="2">
+          </div>
+          <div class="field">
+            <label for="r-rev">ISR time limit <output id="r-rev-out" for="r-rev">60 s</output></label>
+            <input id="r-rev" type="range" min="0" max="3" step="1" value="1">
+          </div>
+          <div class="field">
+            <span class="field-label">HTML that reaches the browser (and the crawler)</span>
+            <div class="seg" role="radiogroup" aria-label="Strategy of the HTML shown">
+              <label><input type="radio" name="r-html" value="ssg" checked><span>SSG</span></label>
+              <label><input type="radio" name="r-html" value="isr"><span>ISR</span></label>
+              <label><input type="radio" name="r-html" value="ssr"><span>SSR</span></label>
+              <label><input type="radio" name="r-html" value="csr"><span>CSR</span></label>
+            </div>
+          </div>
+          <p class="hint">The model: the CDN responds in 40 ms; the server takes 60 ms plus the API latency to build the HTML; CSS and font take 200 ms until the first paint; with CSR, the app's JavaScript takes 600 ms to arrive and run on an average phone on 4G, and only then fetches the data.</p>
+        </div>
+        <div class="output">
+          <div class="table-wrap">
+            <table class="grid rtable">
+              <thead><tr><th></th><th>TTFB</th><th>LCP</th><th>API / hour</th><th>Renders / hour</th><th>Per-user data</th><th>Crawler sees</th></tr></thead>
+              <tbody id="r-rows"></tbody>
+            </table>
+          </div>
+          <div class="tl" id="r-tl"></div>
+          <div class="tl-legend"><span><i class="seg-net"></i>Network to the CDN</span><span><i class="seg-srv"></i>Server building</span><span><i class="seg-api"></i>Waiting for the API</span><span><i class="seg-js"></i>App JS</span><span><i class="seg-paint"></i>CSS, font and paint</span></div>
+          <pre class="code" id="r-html-out"></pre>
+          <p class="hint" id="r-html-note"></p>
+        </div>
+      </div>
+      <details class="src">
+        <summary>See the code (Next.js 16, App Router)</summary>
+        <div class="code-pair">
+          <div><p class="code-label">SSG: nothing reads the request, it is ready at build time</p>
+<pre class="code">export default function AboutPage() {
+  return &lt;h1&gt;About us&lt;/h1&gt;
+}</pre></div>
+          <div><p class="code-label">ISR: cached data with a time limit and a tag</p>
+<pre class="code">async function getProduct(id) {
+  'use cache'
+  cacheLife('hours')                <span class="ok">// time limit</span>
+  cacheTag(`product-${id}`)         <span class="ok">// to signal when it changes</span>
+  return productsApi.get(id)
+}</pre></div>
+        </div>
+        <div class="code-pair" style="margin-top:10px">
+          <div><p class="code-label">SSR: reads the request, builds on every visit</p>
+<pre class="code">export default async function PortfolioPage() {
+  const session = (await cookies()).get('session')
+  const portfolio = await portfolioApi.get(session)
+  return &lt;Summary portfolio={portfolio} /&gt;
+}</pre></div>
+          <div><p class="code-label">CSR: the browser fetches after the JS runs</p>
+<pre class="code">'use client'
+export function Chart() {
+  const { data } = useQuery({ queryKey: ['series'], queryFn: fetchSeries })
+  if (!data) return &lt;Skeleton /&gt;     <span class="no">// this is what the crawler sees</span>
+  return &lt;Line data={data} /&gt;
+}</pre></div>
+        </div>
+      </details>
+      <div class="tradeoff">
+        <h3>And SEO in each one?</h3>
+        <p class="tradeoff-q">For SEO, two things matter: <b>what is in the HTML</b> the crawler receives and <b>how fast the page loads</b>, because Core Web Vitals count toward ranking.</p>
+        <div class="tradeoff-grid four">
+          <div class="tcard">
+            <span class="pill good" style="justify-self:start">SSG and ISR</span>
+            <h3>The best case</h3>
+            <ul>
+              <li>Full HTML, served by the CDN: low TTFB and LCP.</li>
+              <li>With ISR, the crawler sometimes sees a version a few minutes old, which almost never matters.</li>
+            </ul>
+          </div>
+          <div class="tcard">
+            <span class="pill good" style="justify-self:start">SSR</span>
+            <h3>Good, if the API is fast</h3>
+            <ul>
+              <li>The content is in the HTML.</li>
+              <li>A slow API becomes a high TTFB, which hurts LCP and the score.</li>
+            </ul>
+          </div>
+          <div class="tcard">
+            <span class="pill bad" style="justify-self:start">CSR</span>
+            <h3>The worst case</h3>
+            <ul>
+              <li>The HTML arrives with an empty <code>&lt;div id="root"&gt;</code>.</li>
+              <li>Google runs JS, but in a second queue, later and with no guarantee.</li>
+              <li>Link previews (WhatsApp, LinkedIn, Slack), other search engines and AI crawlers often do not run JS.</li>
+            </ul>
+          </div>
+          <div class="tcard combo">
+            <span class="pill neutral" style="justify-self:start">Watch the label</span>
+            <h3>Client Component is not CSR</h3>
+            <p>In Next, a component with <code>'use client'</code> is also rendered on the server on the first load and then hydrated. SEO only suffers when the <b>data</b> is fetched in the browser.</p>
+            <p>Title, description and Open Graph come from <code>metadata</code> or <code>generateMetadata</code>, always on the server. A logged-in area is not indexed: SEO does not apply there.</p>
+          </div>
+        </div>
+      </div>
+      <p class="takeaway"><b>Senior take.</b> SSG and ISR win at almost everything, but they only work for content that is the same for everyone. The deciding question is not "which one is faster" but "can this HTML be the same for every person?". If it can, cache it. If it cannot, use SSR with streaming. Leave CSR for what comes after the interaction.</p>
+    </section>
+
+    <section class="lab" id="isr">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Revalidation</p>
+        <h2>The price changed. Who still sees the old one?</h2>
+        <p>ISR uses <i>stale-while-revalidate</i>: when the cache expires, the next visit gets the old version right away and triggers regeneration in the background. Whoever arrives after that gets the new one. Change the price in the database, make visits and see who saw the old price in each revalidation mode. Here the time limit is 10 s, and regenerating takes 1.5 s.</p>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <div class="field">
+            <span class="field-label">How the cache goes stale</span>
+            <div class="seg" role="radiogroup" aria-label="Revalidation mode">
+              <label><input type="radio" name="isr-mode" value="time" checked><span>By time</span></label>
+              <label><input type="radio" name="isr-mode" value="tag"><span>revalidateTag</span></label>
+              <label><input type="radio" name="isr-mode" value="update"><span>updateTag</span></label>
+            </div>
+          </div>
+          <p class="hint" id="isr-mode-hint"></p>
+          <div class="row">
+            <button type="button" class="btn" id="isr-change">Change the price in the database</button>
+            <button type="button" class="btn primary" id="isr-visit">A visit arrives</button>
+          </div>
+          <label class="check"><input type="checkbox" id="isr-auto"><span>One visit per second</span></label>
+          <button type="button" class="btn ghost small" id="isr-reset" style="justify-self:start">Start over</button>
+        </div>
+        <div class="output">
+          <div class="stats">
+            <div class="stat"><span class="stat-n" id="isr-db">–</span><span class="stat-l">price in the database</span></div>
+            <div class="stat"><span class="stat-n" id="isr-cache">–</span><span class="stat-l">price in the cache</span><span class="pill neutral" id="isr-state">fresh</span></div>
+            <div class="stat"><span class="stat-n" id="isr-age">0 s</span><span class="stat-l">cache age</span></div>
+            <div class="stat"><span class="stat-n" id="isr-old">0 of 0</span><span class="stat-l">visits that saw an old price</span></div>
+          </div>
+          <ol class="log" id="isr-log" data-empty="Visits and revalidations show up here."></ol>
+        </div>
+      </div>
+      <details class="src">
+        <summary>See the code</summary>
+        <div class="code-pair">
+          <div><p class="code-label">By time: expires on its own</p>
+<pre class="code">async function getPrice(id) {
+  'use cache'
+  cacheLife({ revalidate: 10 })   <span class="c">// seconds</span>
+  return pricesApi.get(id)
+}
+
+<span class="c">// Previous model (without cacheComponents):</span>
+export const revalidate = 10</pre></div>
+          <div><p class="code-label">On demand: signal when it changes</p>
+<pre class="code"><span class="c">// CMS webhook or Route Handler called by the backend</span>
+revalidateTag('prices', 'max')    <span class="ok">// next visits: old, then new</span>
+
+<span class="c">// Server Action of whoever just edited</span>
+'use server'
+await pricesApi.update(id, value)
+updateTag('prices')               <span class="ok">// whoever saved already sees the new one</span></pre></div>
+        </div>
+      </details>
+      <p class="takeaway"><b>Senior take.</b> A fixed time limit is simple, but it fails in both directions: it regenerates for nothing when nothing changed, and it keeps the old price until the limit expires. When the backend knows when the data changes, revalidate on demand with <code>revalidateTag</code> and use a long time limit only as a safety net. For whoever just saved, use <code>updateTag</code>: nobody accepts editing a price and seeing the old one on the next screen.</p>
+    </section>
+
+    <section class="lab" id="cache">
+      <div class="lab-head">
+        <p class="eyebrow">Experiment · Caching in Next.js</p>
+        <h2>What makes the route dynamic?</h2>
+        <p>In the App Router you do not pick "SSR" or "SSG" in a config file: Next looks at what each part of the page does and decides. Check what the page does and compare the result in the previous model (the default to this day) and with <code>cacheComponents: true</code> (Next 16).</p>
+      </div>
+      <div class="table-wrap">
+        <table class="grid">
+          <thead><tr><th>Layer</th><th>Where it lives</th><th>What it stores</th><th>How long</th></tr></thead>
+          <tbody>
+            <tr><td><b>Request memoization</b></td><td>Server</td><td>Result of <code>fetch</code> or of React's <code>cache()</code> called more than once in the same render</td><td>Only that request</td></tr>
+            <tr><td><b>Data cache</b></td><td>Server</td><td>Result of cached <code>fetch</code> or of functions with <code>'use cache'</code></td><td>Across requests and users, until revalidation</td></tr>
+            <tr><td><b>Route cache</b></td><td>Server and CDN</td><td>The HTML and RSC payload of the already rendered page</td><td>From the build, until revalidation</td></tr>
+            <tr><td><b>Router cache</b></td><td>Browser</td><td>Pages visited and prefetched by <code>&lt;Link&gt;</code></td><td>During navigation</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="playground">
+        <div class="controls">
+          <span class="field-label">The catalog page has…</span>
+          <label class="check"><input type="checkbox" checked disabled><span>Header and menu, no data</span></label>
+          <label class="check"><input type="checkbox" id="c-products" checked><span>Product list cached for 1 hour (<code>'use cache'</code> or <code>fetch</code> with <code>revalidate</code>)</span></label>
+          <label class="check"><input type="checkbox" id="c-cookie"><span>"Hi, Ana" read from the session cookie (<code>cookies()</code>)</span></label>
+          <label class="check"><input type="checkbox" id="c-search"><span>Filters from the URL (<code>searchParams</code>)</span></label>
+          <label class="check"><input type="checkbox" id="c-fresh"><span>Uncached dollar exchange rate (<code>fetch</code> with no option)</span></label>
+          <p class="hint">Since Next 15, <code>fetch</code> is not cached by default: the data cache is opt-in.</p>
+        </div>
+        <div class="output">
+          <p class="code-label">Previous model</p>
+          <div class="banner" id="c-old"></div>
+          <p class="code-label">With cacheComponents (Next 16)</p>
+          <div class="parts" id="c-new"></div>
+          <p class="hint" id="c-new-note"></p>
+        </div>
+      </div>
+      <details class="src">
+        <summary>See the code</summary>
+<pre class="code"><span class="c">// next.config.ts</span>
+const nextConfig = { cacheComponents: true }
+
+<span class="c">// app/catalog/page.tsx</span>
+export default function CatalogPage() {
+  return (
+    &lt;&gt;
+      &lt;Header /&gt;                                      <span class="ok">// static: goes in the shell</span>
+      &lt;Products /&gt;                                    <span class="ok">// 'use cache': goes in the shell</span>
+      &lt;Suspense fallback={&lt;GreetingSkeleton /&gt;}&gt;
+        &lt;Greeting /&gt;                                  <span class="c">// reads cookies(): streamed in</span>
+      &lt;/Suspense&gt;
+    &lt;/&gt;
+  )
+}
+
+async function Products() {
+  'use cache'
+  cacheLife('hours')
+  cacheTag('products')
+  return &lt;List items={await productsApi.list()} /&gt;
+}</pre>
+      </details>
+      <p class="takeaway"><b>Senior take.</b> In the previous model, a single cookie read makes the whole route dynamic, and caching becomes all or nothing. With Cache Components (Partial Prerendering), what is static or cached goes in the shell served right away, and only the part that depends on the request is streamed inside the <code>&lt;Suspense&gt;</code>. React's <code>cache()</code>, which many people confuse with ISR, only avoids calling the same function twice in the same request.</p>
+    </section>
+
+    <section id="decidir"></section>
+  </main>
+
+  <nav class="pager" id="pager" aria-label="Module navigation"></nav>
+</div>
+
+<script src="../lab.js"></script>
+<script>
+const { $, $$, esc } = Lab;
+
+/* The four strategies */
+(() => {
+  const VISITS = [100, 1000, 10000, 100000, 1000000];
+  const REVAL = [10, 60, 300, 3600];
+  const CDN = 40, SRV = 60, PAINT = 200, JS = 600;
+  const fmt = (v) => v.toLocaleString('en-US');
+  const ms = (v) => (v >= 1000 ? (v / 1000).toFixed(2) + ' s' : Math.round(v) + ' ms');
+  const lat = $('#r-lat'), vis = $('#r-vis'), rev = $('#r-rev');
+
+  const HTML = {
+    page: '&lt;!doctype html&gt;\n&lt;html lang="en"&gt;\n&lt;head&gt;\n  &lt;title&gt;Pro Running Shoe · Store&lt;/title&gt;\n  &lt;meta property="og:image" content="/shoe.jpg"&gt;\n&lt;/head&gt;\n&lt;body&gt;\n  &lt;h1&gt;Pro Running Shoe&lt;/h1&gt;\n  &lt;p class="price"&gt;$499.90&lt;/p&gt;\n  &lt;img src="/shoe.jpg" width="800" height="600" alt="Pro Running Shoe"&gt;\n  &lt;p&gt;Cushioning for long races…&lt;/p&gt;\n  &lt;script src="/app.js"&gt;&lt;/script&gt;\n&lt;/body&gt;\n&lt;/html&gt;',
+    csr: '&lt;!doctype html&gt;\n&lt;html lang="en"&gt;\n&lt;head&gt;\n  &lt;title&gt;Store&lt;/title&gt;\n&lt;/head&gt;\n&lt;body&gt;\n  <span class="no">&lt;div id="root"&gt;&lt;/div&gt;</span>\n  &lt;script src="/app.js"&gt;&lt;/script&gt;\n&lt;/body&gt;\n&lt;/html&gt;',
+  };
+  const NOTE = {
+    ssg: 'Generated once at build time. Everyone gets the same file, until the next deploy.',
+    isr: 'The same HTML as SSG, but regenerated after the time limit or when the backend signals that the product changed.',
+    ssr: 'The same content, built on every visit. It is the only one of the three that can bring different data for each person.',
+    csr: 'This is what the crawler and link previews receive. The name, price and image only exist after the JavaScript runs and calls the API.',
+  };
+
+  function model(l, v, r) {
+    const srvTtfb = SRV + l;
+    return {
+      ssg: { ttfb: CDN, lcp: CDN + PAINT, api: 0, renders: 0, user: false, seo: true, segs: [['net', CDN], ['paint', PAINT]] },
+      isr: { ttfb: CDN, lcp: CDN + PAINT, api: Math.min(v, Math.ceil(3600 / r)), renders: Math.min(v, Math.ceil(3600 / r)), user: false, seo: true, segs: [['net', CDN], ['paint', PAINT]] },
+      ssr: { ttfb: srvTtfb, lcp: srvTtfb + PAINT, api: v, renders: v, user: true, seo: true, segs: [['net', CDN], ['srv', SRV - CDN], ['api', l], ['paint', PAINT]] },
+      csr: { ttfb: CDN, lcp: CDN + PAINT + JS + l + 50, api: v, renders: 0, user: true, seo: false, segs: [['net', CDN], ['paint', PAINT], ['js', JS], ['api', l], ['paint', 50]] },
+    };
+  }
+
+  function render() {
+    const l = +lat.value, v = VISITS[+vis.value], r = REVAL[+rev.value];
+    $('#r-lat-out').textContent = l + ' ms';
+    $('#r-vis-out').textContent = fmt(v);
+    $('#r-rev-out').textContent = r >= 60 ? r / 60 + ' min' : r + ' s';
+    const m = model(l, v, r);
+    const sel = $('input[name=r-html]:checked').value;
+    const pill = (ok, yes, no) => `<span class="pill ${ok ? 'good' : 'bad'}">${ok ? yes : no}</span>`;
+    const lcpPill = (x) => `<span class="pill ${x <= 2500 ? 'good' : x <= 4000 ? 'warn' : 'bad'}">${ms(x)}</span>`;
+    $('#r-rows').innerHTML = Object.entries(m).map(([k, s]) => `
+      <tr${k === sel ? ' class="sel"' : ''}><td><b>${k.toUpperCase()}</b></td><td>${ms(s.ttfb)}</td><td>${lcpPill(s.lcp)}</td>
+      <td>${s.api ? fmt(s.api) : (k === 'ssg' ? '0 (build only)' : '0')}</td><td>${fmt(s.renders)}</td>
+      <td>${pill(s.user, 'yes', 'no')}</td><td>${pill(s.seo, 'full HTML', 'empty div')}</td></tr>`).join('');
+    const max = Math.max(...Object.values(m).map((s) => s.lcp));
+    $('#r-tl').innerHTML = Object.entries(m).map(([k, s]) => `
+      <div class="tl-row"><span>${k.toUpperCase()}</span><div class="tl-bar" role="img" aria-label="${k.toUpperCase()}: content appears at ${ms(s.lcp)}">
+      ${s.segs.map(([c, w]) => `<span class="seg-${c}" style="width:${(w / max) * 100}%"></span>`).join('')}</div><span>${ms(s.lcp)}</span></div>`).join('');
+    $('#r-html-out').innerHTML = sel === 'csr' ? HTML.csr : HTML.page;
+    $('#r-html-note').textContent = NOTE[sel];
+  }
+  [lat, vis, rev].forEach((el) => el.addEventListener('input', render));
+  $$('input[name=r-html]').forEach((el) => el.addEventListener('change', render));
+  render();
+})();
+
+/* Revalidation (ISR) */
+(() => {
+  const WINDOW = 10000, REGEN = 1500;
+  const usd = (v) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  const HINT = {
+    time: 'cacheLife({ revalidate: 10 }): nobody signals that the price changed. The cache only expires 10 s after it was generated.',
+    tag: "The backend calls revalidateTag('prices', 'max') when the price changes. The next visit still gets the old one and triggers regeneration.",
+    update: "Whoever changes the price in a Server Action calls updateTag('prices'). The next visit waits for regeneration and already sees the new one.",
+  };
+  const log = $('#isr-log');
+  let s, autoTimer = null;
+
+  const mode = () => $('input[name=isr-mode]:checked').value;
+  const write = (text, cls) => {
+    const li = document.createElement('li');
+    li.className = 'new' + (cls ? ' ' + cls : '');
+    li.textContent = text;
+    log.prepend(li);
+    while (log.children.length > 10) log.lastChild.remove();
+  };
+  const expired = () => (mode() === 'time' ? performance.now() - s.genAt > WINDOW : s.stale);
+
+  function paint() {
+    $('#isr-db').textContent = usd(s.db);
+    $('#isr-cache').textContent = usd(s.cache);
+    $('#isr-age').textContent = Math.floor((performance.now() - s.genAt) / 1000) + ' s';
+    $('#isr-old').textContent = `${s.old} of ${s.visits}`;
+    const st = $('#isr-state');
+    if (s.regenerating) { st.className = 'pill neutral'; st.textContent = 'regenerating'; }
+    else if (expired()) { st.className = 'pill warn'; st.textContent = 'expired'; }
+    else if (s.cache !== s.db) { st.className = 'pill bad'; st.textContent = 'outdated'; }
+    else { st.className = 'pill good'; st.textContent = 'fresh'; }
+  }
+
+  function regenerate(done) {
+    s.regenerating = true;
+    setTimeout(() => {
+      s.cache = s.db; s.genAt = performance.now(); s.stale = false; s.regenerating = false;
+      write(`Cache regenerated: ${usd(s.cache)}`);
+      done?.(); paint();
+    }, REGEN);
+  }
+
+  function visit() {
+    const n = ++s.visits;
+    if (mode() === 'update' && s.stale) {
+      const t0 = performance.now();
+      const finish = () => write(`Visit ${n} waited ${((performance.now() - t0) / 1000).toFixed(1)} s and saw ${usd(s.cache)} (new)`);
+      if (s.regenerating) { const wait = setInterval(() => { if (!s.regenerating) { clearInterval(wait); finish(); paint(); } }, 50); }
+      else regenerate(finish);
+      paint();
+      return;
+    }
+    const old = s.cache !== s.db;
+    if (old) s.old++;
+    const exp = expired();
+    write(`Visit ${n} saw ${usd(s.cache)}${old ? ' (old)' : ''}${exp && !s.regenerating ? ' and triggered regeneration' : ''}`, old ? 'bad' : '');
+    if (exp && !s.regenerating) regenerate();
+    paint();
+  }
+
+  function change() {
+    s.db += 10 + Math.floor(Math.random() * 40);
+    write(`Database: the price changed to ${usd(s.db)}`);
+    if (mode() === 'tag') { s.stale = true; write("revalidateTag('prices', 'max')"); }
+    if (mode() === 'update') { s.stale = true; write("updateTag('prices')"); }
+    paint();
+  }
+
+  function reset() {
+    s = { db: 499, cache: 499, genAt: performance.now(), stale: false, regenerating: false, visits: 0, old: 0 };
+    log.innerHTML = '';
+    $('#isr-mode-hint').textContent = HINT[mode()];
+    paint();
+  }
+
+  $('#isr-visit').addEventListener('click', visit);
+  $('#isr-change').addEventListener('click', change);
+  $('#isr-reset').addEventListener('click', reset);
+  $$('input[name=isr-mode]').forEach((el) => el.addEventListener('change', reset));
+  $('#isr-auto').addEventListener('change', (e) => {
+    clearInterval(autoTimer);
+    if (e.target.checked) autoTimer = setInterval(visit, 1000);
+  });
+  setInterval(() => s && paint(), 500);
+  reset();
+})();
+
+/* What makes the route dynamic */
+(() => {
+  const ids = ['c-products', 'c-cookie', 'c-search', 'c-fresh'];
+  function render() {
+    const on = Object.fromEntries(ids.map((id) => [id, $('#' + id).checked]));
+    const dynamic = on['c-cookie'] || on['c-search'] || on['c-fresh'];
+    const old = $('#c-old');
+    if (dynamic) {
+      old.className = 'banner warn';
+      old.innerHTML = '<b>Whole route dynamic (SSR on every request)</b>One request read or one uncached fetch is enough. ' +
+        (on['c-products'] ? 'The product list does not call the API again (the data cache still applies), but the whole page is rendered on every visit.' : 'Nothing on the page is served ready-made.');
+    } else if (on['c-products']) {
+      old.className = 'banner good';
+      old.innerHTML = '<b>Static with revalidation (ISR)</b>The page comes ready from the CDN and is regenerated when the product list expires.';
+    } else {
+      old.className = 'banner good';
+      old.innerHTML = '<b>Static (SSG)</b>Nothing reads the request: the HTML is generated at build time.';
+    }
+    const parts = [['Header and menu', 'good', 'static shell']];
+    if (on['c-products']) parts.push(['Product list', 'good', 'shell, cached for 1 h']);
+    if (on['c-cookie']) parts.push(['"Hi, Ana"', 'warn', 'streamed, inside <Suspense>']);
+    if (on['c-search']) parts.push(['URL filters', 'warn', 'streamed, inside <Suspense>']);
+    if (on['c-fresh']) parts.push(['Dollar exchange rate', 'warn', 'streamed, inside <Suspense>']);
+    $('#c-new').innerHTML = parts.map(([n, tone, where]) => `<div class="part"><span>${n}</span><span class="pill ${tone}">${esc(where)}</span></div>`).join('');
+    $('#c-new-note').textContent = dynamic
+      ? 'The shell (with the Suspense fallback) is ready right away; only the streamed parts wait for the server. Without the <Suspense>, Next reports an error in development.'
+      : 'Nothing depends on the request: the whole page goes in the prerendered shell.';
+  }
+  ids.forEach((id) => $('#' + id).addEventListener('change', render));
+  render();
+})();
+
+/* Decision */
+Lab.decision($('#decidir'), {
+  title: 'Where should this page be rendered?',
+  intro: 'Answer about a real page. The questions are about the data, not the framework: the strategy comes from the answers.',
+  questions: [
+    { id: 'quem', text: 'Is the content the same for everyone?', hint: 'Think about the HTML: could two different visitors receive exactly the same file?',
+      options: [{ v: 'todos', label: 'Yes, the same for everyone' }, { v: 'usuario', label: 'No, it depends on who is logged in' }, { v: 'misto', label: 'One part is the same, another is per user' }] },
+    { id: 'muda', text: 'How often does this content change?', when: (a) => a.quem === 'todos',
+      options: [{ v: 'deploy', label: 'Only when the team publishes' }, { v: 'horas', label: 'A few times per hour or per day' }, { v: 'segundos', label: 'Every second (exchange rate, live score)' }] },
+    { id: 'velho', text: 'Can it be a few seconds or minutes out of date?', hint: 'Price and stock usually cannot; news and product descriptions usually can.', when: (a) => a.quem === 'todos' && a.muda === 'horas',
+      options: [{ v: 'pode', label: 'It can' }, { v: 'nao', label: 'It cannot' }] },
+    { id: 'interacao', text: 'What is the screen like after login?', when: (a) => a.quem === 'usuario',
+      options: [{ v: 'leitura', label: 'The user opens it to see data (dashboard, statement)' }, { v: 'ferramenta', label: 'It is a highly interactive tool (editor, spreadsheet)' }] },
+  ],
+  decide(a) {
+    if (a.quem === 'misto') return { title: 'Static shell and per-user part streamed in', body: '<p>With <code>cacheComponents</code>, what is the same for everyone goes in the prerendered shell (static or with <code>\'use cache\'</code>), and the per-user part reads the cookie inside a <code>&lt;Suspense&gt;</code>. In the previous model, reading the cookie makes the whole route dynamic: consider moving the personalized part to the client or accepting SSR.</p>', code: "<Products />            // 'use cache'\n<Suspense fallback={<Skeleton />}>\n  <Greeting />          // reads cookies()\n</Suspense>" };
+    if (a.quem === 'usuario') return a.interacao === 'leitura'
+      ? { title: 'SSR with streaming', body: '<p>The data is per person, so you cannot serve a shared HTML. Fetch on the server and show the sections with <code>&lt;Suspense&gt;</code>, so the slowest one does not hold back the others. Use React\'s <code>cache()</code> to avoid calling the same API twice in the same request.</p><ul><li>SEO does not apply: crawlers do not get past the login.</li></ul>' }
+      : { tone: 'warn', title: 'SSR for the shell, CSR for the tool', body: '<p>Render on the server what gives context (menu, title, initial data) and leave the highly interactive part on the client. If the tool is heavy, load it with <code>dynamic()</code> or <code>lazy()</code>, so it does not delay the rest of the page.</p>', code: "const Editor = dynamic(() => import('./editor'))" };
+    if (a.muda === 'deploy') return { title: 'SSG', body: '<p>Do nothing that reads the request and Next generates the page at build time. It comes from the CDN in milliseconds and handles any traffic spike without calling the API.</p>' };
+    if (a.muda === 'segundos') return { tone: 'warn', title: 'Static shell and live data on the side', body: '<p>No page cache keeps up with changes every second. Serve the static page and update only the number: SSE or WebSocket if it needs to be real time, polling if a few seconds of delay is acceptable.</p>' };
+    return a.velho === 'pode'
+      ? { title: 'ISR with on-demand revalidation', body: '<p>Cache the data with a tag and ask the backend to signal when it changes. Use a long time limit only as a safety net.</p>', code: "'use cache'\ncacheLife('days')\ncacheTag('products')\n// on change: revalidateTag('products', 'max')" }
+      : { tone: 'warn', title: 'ISR for the page, sensitive data on the side', body: '<p>Cache what can go stale (description, photos) and fetch without cache only what cannot (price, stock): in a <code>&lt;Suspense&gt;</code> on the server or on the client. Whoever edits the data uses <code>updateTag</code> to see the change right away.</p>' };
+  },
+});
+</script>
+</body>
+</html>
